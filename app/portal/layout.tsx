@@ -1,0 +1,48 @@
+import { Inter, Outfit } from 'next/font/google'
+import '@/app/globals.css'
+import { Toaster } from 'sonner'
+import { LogOut, UserCircle } from 'lucide-react'
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' })
+
+export default function PortalLayout({
+    children,
+}: {
+    children: React.ReactNode
+}) {
+    return (
+        <div className={`${inter.variable} ${outfit.variable} font-sans bg-bg-app min-h-screen text-text-primary`}>
+            {/* Patient Header */}
+            <header className="h-[var(--header-height)] border-b border-bg-border bg-bg-surface sticky top-0 z-50">
+                <div className="max-w-5xl mx-auto h-full px-6 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-sm bg-brand-primary flex items-center justify-center">
+                            <span className="text-bg-app font-display font-bold text-lg">M</span>
+                        </div>
+                        <span className="font-display font-semibold text-text-primary tracking-tight hidden sm:block">Portal do Paciente</span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 pr-4 border-r border-bg-border">
+                            <div className="text-right hidden sm:block">
+                                <p className="text-xs font-bold text-text-primary leading-none">Nicolas Moreira</p>
+                                <p className="text-[10px] text-text-muted mt-0.5">Paciente</p>
+                            </div>
+                            <UserCircle size={24} className="text-brand-primary" />
+                        </div>
+                        <button className="p-2 text-text-muted hover:text-brand-danger transition-colors" title="Sair do Portal">
+                            <LogOut size={20} />
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main className="max-w-5xl mx-auto p-6">
+                {children}
+            </main>
+
+            <Toaster position="top-center" richColors />
+        </div>
+    )
+}
