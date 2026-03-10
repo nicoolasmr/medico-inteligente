@@ -23,7 +23,7 @@ export default function PatientPortalPage() {
         <div className="space-y-10 py-4">
             {/* Welcome Section */}
             <section>
-                <h1 className="text-3xl font-display text-text-primary tracking-tight mb-2">Olá, Nicolas</h1>
+                <h1 className="text-3xl font-display text-text-primary tracking-tight mb-2">Olá!</h1>
                 <p className="text-text-secondary text-sm">Bem-vindo ao seu espaço de saúde digital.</p>
             </section>
 
