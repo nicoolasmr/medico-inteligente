@@ -1,8 +1,11 @@
-'use client'
-
 import { Bell, Search, User } from 'lucide-react'
 
-export function Header() {
+type HeaderProps = {
+    userName: string
+    specialty: string
+}
+
+export function Header({ userName, specialty }: HeaderProps) {
     return (
         <header className="h-[var(--header-height)] border-b border-bg-border bg-bg-surface/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-8">
             <div className="flex items-center gap-4 flex-1">
@@ -26,8 +29,8 @@ export function Header() {
 
                 <div className="flex items-center gap-3">
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-medium text-text-primary leading-none">Dr. Nicolas Moreira</p>
-                        <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-1">Clínica Geral</p>
+                        <p className="text-sm font-medium text-text-primary leading-none">{userName}</p>
+                        <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-1">{specialty}</p>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-bg-elevated border border-bg-border flex items-center justify-center overflow-hidden">
                         <User size={16} className="text-text-secondary" />

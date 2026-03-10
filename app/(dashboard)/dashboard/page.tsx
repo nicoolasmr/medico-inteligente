@@ -10,24 +10,43 @@ import {
     Target,
     CircleDollarSign,
     ChevronRight,
-    AlertCircle,
     Lightbulb,
     Bell
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 
+type DashboardData = Awaited<ReturnType<typeof getDashboardData>>
+
 export default function DashboardPage() {
-    const [data, setData] = useState<any>(null)
+    const [data, setData] = useState<DashboardData | null>(null)
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        getDashboardData().then(res => {
-            setData(res)
-            setLoading(false)
-        })
+        let mounted = true
+
+        getDashboardData()
+            .then(res => {
+                if (!mounted) return
+                setData(res)
+                setError(null)
+            })
+            .catch(() => {
+                if (!mounted) return
+                setError('Não foi possível carregar as métricas do dashboard.')
+            })
+            .finally(() => {
+                if (!mounted) return
+                setLoading(false)
+            })
+
+        return () => {
+            mounted = false
+        }
     }, [])
 
     if (loading) return <div className="h-full flex items-center justify-center">Carregando métricas...</div>
+    if (error || !data) return <div className="h-full flex items-center justify-center text-brand-danger">{error ?? 'Erro inesperado'}</div>
 
     const kpis = [
         { label: 'Novos Pacientes', value: data.kpis.newPatients.value, trend: data.kpis.newPatients.trend, icon: Users, color: 'text-brand-primary', href: '/patients' },
@@ -38,23 +57,21 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-8">
-            {/* Header Section */}
             <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-display text-text-primary tracking-tight">Bom dia, Dr. Nicolas</h1>
+                <h1 className="text-3xl font-display text-text-primary tracking-tight">Bom dia, {data.userName}</h1>
                 <p className="text-text-secondary text-sm">Aqui está o que aconteceu na sua clínica hoje.</p>
             </div>
 
-            {/* KPI Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {kpis.map((kpi, idx) => (
                     <Link key={idx} href={kpi.href} className="card p-5 group hover:glow-border transition-all duration-300">
                         <div className="flex items-center justify-between mb-4">
-                            <div className={cn("p-2 rounded-sm bg-bg-elevated", kpi.color)}>
+                            <div className={cn('p-2 rounded-sm bg-bg-elevated', kpi.color)}>
                                 <kpi.icon size={20} />
                             </div>
                             <div className={cn(
-                                "text-xs font-semibold flex items-center gap-1",
-                                (kpi.trend ?? 0) >= 0 ? "text-brand-success" : "text-brand-danger"
+                                'text-xs font-semibold flex items-center gap-1',
+                                (kpi.trend ?? 0) >= 0 ? 'text-brand-success' : 'text-brand-danger'
                             )}>
                                 {(kpi.trend ?? 0) >= 0 ? '+' : ''}{kpi.trend}%
                                 <TrendingUp size={12} className={(kpi.trend ?? 0) < 0 ? 'rotate-180' : ''} />
@@ -66,7 +83,6 @@ export default function DashboardPage() {
                 ))}
             </div>
 
-            {/* Insights Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     <div className="card-elevated p-6">
@@ -75,13 +91,13 @@ export default function DashboardPage() {
                             Alertas Inteligentes
                         </h3>
                         <div className="space-y-3">
-                            {data.alerts.map((alert: any) => (
+                            {data.alerts.map((alert) => (
                                 <div key={alert.id} className="flex items-center justify-between p-4 rounded-sm bg-bg-surface border border-bg-border hover:bg-bg-hover transition-colors">
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
-                                            "w-1 h-10 rounded-full",
-                                            alert.type === 'warning' ? "bg-brand-warning" :
-                                                alert.type === 'opportunity' ? "bg-brand-primary" : "bg-text-muted"
+                                            'w-1 h-10 rounded-full',
+                                            alert.type === 'warning' ? 'bg-brand-warning' :
+                                                alert.type === 'opportunity' ? 'bg-brand-primary' : 'bg-text-muted'
                                         )} />
                                         <div>
                                             <p className="text-sm font-medium text-text-primary">{alert.message}</p>
@@ -115,27 +131,17 @@ export default function DashboardPage() {
                         </div>
                         <h4 className="text-lg font-display text-text-primary mb-2">Oportunidade detectada</h4>
                         <p className="text-sm text-text-secondary leading-relaxed mb-6">
-                            Você tem 5 pacientes de Cardiologia que não retornam há 6 meses. Reativar estes contatos pode gerar um incremento de R$ 2.400 em procedimentos agendados.
+                            Você tem oportunidades em aberto no pipeline. Revisar pendências pode aumentar conversão e faturamento.
                         </p>
-                        <Link href="/patients" className="block w-full py-2 bg-brand-primary text-bg-app font-semibold rounded-sm hover:bg-brand-accent transition-all text-sm text-center">
-                            Reativar Pacientes
+                        <Link href="/pipeline" className="block w-full py-2 bg-brand-primary text-bg-app font-semibold rounded-sm hover:bg-brand-accent transition-all text-sm text-center">
+                            Revisar Pipeline
                         </Link>
                     </div>
 
                     <div className="card p-6">
                         <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Próximos Agendamentos</h3>
-                        <div className="space-y-4">
-                            {[1, 2, 3].map(i => (
-                                <div key={i} className="flex items-center gap-3 border-b border-bg-border pb-3 last:border-0 last:pb-0">
-                                    <div className="w-10 h-10 rounded-full bg-bg-elevated flex items-center justify-center text-xs font-bold text-text-secondary">
-                                        {i === 1 ? 'MS' : i === 2 ? 'CO' : 'AR'}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-text-primary truncate">{i === 1 ? 'Maria Santos' : i === 2 ? 'Carlos Oliveira' : 'Ana Rodrigues'}</p>
-                                        <p className="text-xs text-text-muted">14:00 - Consulta de Rotina</p>
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="space-y-4 text-xs text-text-muted">
+                            Esta seção será preenchida automaticamente com os próximos horários.
                         </div>
                         <Link href="/agenda" className="block w-full mt-4 text-xs font-semibold text-text-muted hover:text-brand-primary transition-colors py-2 border border-bg-border rounded-sm text-center">
                             Ver agenda completa
