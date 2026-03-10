@@ -43,7 +43,7 @@ export async function searchPatients(query: string): Promise<Patient[]> {
  */
 export async function getPatient(id: string): Promise<Patient | null> {
     const clinicId = await getClinicId()
-    const patient = await prisma.patient.findUnique({
+    const patient = await prisma.patient.findFirst({
         where: { id, clinicId },
     })
     return patient as unknown as Patient | null

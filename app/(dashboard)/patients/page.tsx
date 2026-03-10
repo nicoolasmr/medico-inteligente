@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { UserPlus, Search, Filter, Download } from 'lucide-react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, useCallback } from 'react'
+import { UserPlus, Search, Filter, Download, Users as UsersIcon } from 'lucide-react'
 import { PatientTable } from '@/components/patients/PatientTable'
 import { AddPatientDialog } from '@/components/patients/AddPatientDialog'
 import { EditPatientDialog } from '@/components/patients/EditPatientDialog'
+import { PatientTableSkeleton } from '@/components/patients/PatientTableSkeleton'
 import { getPatients, deletePatient } from './actions'
 import type { Patient } from '@/types'
 import { toast } from 'sonner'
@@ -16,11 +19,7 @@ export default function PatientsPage() {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
 
-    useEffect(() => {
-        loadPatients()
-    }, [])
-
-    async function loadPatients() {
+    const loadPatients = useCallback(async () => {
         try {
             const data = await getPatients()
             setPatients(data)
@@ -29,7 +28,11 @@ export default function PatientsPage() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
+
+    useEffect(() => {
+        loadPatients()
+    }, [loadPatients])
 
     async function handleDelete(id: string) {
         try {
@@ -113,14 +116,28 @@ export default function PatientsPage() {
 
             {/* Table Section */}
             {loading ? (
-                <div className="h-64 flex items-center justify-center text-text-muted">Carregando pacientes...</div>
-            ) : (
-                <div className="lg:col-span-3">
+                <PatientTableSkeleton />
+            ) : filteredPatients.length > 0 ? (
+                <div className="lg:col-span-3 animate-in fade-in duration-500">
                     <PatientTable
                         patients={filteredPatients}
                         onDelete={handleDelete}
                         onEdit={setEditingPatient}
                     />
+                </div>
+            ) : (
+                <div className="h-64 card border-dashed flex flex-col items-center justify-center text-center p-8">
+                    <UsersIcon size={48} className="text-text-muted mb-4 opacity-20" />
+                    <h3 className="text-text-primary font-bold mb-1">Nenhum paciente encontrado</h3>
+                    <p className="text-text-secondary text-sm max-w-xs">
+                        Tente ajustar sua busca ou adicione um novo paciente à base da clínica.
+                    </p>
+                    <button
+                        onClick={() => setIsAddDialogOpen(true)}
+                        className="mt-6 text-brand-primary text-sm font-bold uppercase tracking-widest hover:underline"
+                    >
+                        + Cadastrar agora
+                    </button>
                 </div>
             )}
         </div>

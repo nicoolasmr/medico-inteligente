@@ -61,7 +61,7 @@ export function InsightGrid({ insights }: { insights: Insight[] }) {
                     <Sparkles size={32} className="text-brand-primary animate-pulse" />
                     <p className="text-sm font-bold text-text-muted uppercase tracking-widest text-center italic">
                         Nenhum insight gerado recentemente.<br />
-                        <span className="text-[10px] font-normal lowercase block mt-1">Clique em "Gerar Nova Análise" para começar.</span>
+                        <span className="text-[10px] font-normal lowercase block mt-1">Clique em &quot;Gerar Nova Análise&quot; para começar.</span>
                     </p>
                 </div>
             )}
