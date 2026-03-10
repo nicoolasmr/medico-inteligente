@@ -1,6 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+export const dynamic = 'force-dynamic'
+
+import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import { getRevenueSummary, getPayments } from './actions'
 import { RevenueKpis } from '@/components/financeiro/RevenueKpis'
 import { PaymentsTable } from '@/components/financeiro/PaymentsTable'
@@ -14,13 +17,14 @@ export default function FinanceiroPage() {
     const [payments, setPayments] = useState<Payment[]>([])
     const [loading, setLoading] = useState(true)
 
-    useState(() => {
+    useEffect(() => {
+        setLoading(true)
         Promise.all([getRevenueSummary(), getPayments()]).then(([s, p]) => {
             setSummary(s)
             setPayments(p)
             setLoading(false)
         })
-    })
+    }, [])
 
     return (
         <div className="space-y-8 h-full flex flex-col">
@@ -101,9 +105,9 @@ export default function FinanceiroPage() {
                                 <p className="text-[10px] text-text-muted italic">Nenhum dado de procedimento disponível.</p>
                             )}
                         </div>
-                        <button className="w-full mt-6 text-[10px] font-bold text-brand-primary uppercase tracking-widest hover:underline text-center">
+                        <Link href="/insights" className="block w-full mt-6 text-[10px] font-bold text-brand-primary uppercase tracking-widest hover:underline text-center">
                             Ver relatório detalhado
-                        </button>
+                        </Link>
                     </div>
 
                     <div className="card p-6 bg-gradient-to-br from-bg-surface to-bg-elevated border-brand-warning/20">

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
@@ -51,14 +52,14 @@ export function TreatmentCard({ treatment }: TreatmentCardProps) {
             )}
         >
             <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
+                <Link href={`/patients/${treatment.patientId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className="w-6 h-6 rounded-full bg-bg-elevated flex items-center justify-center text-[10px] font-bold text-text-muted">
                         {((treatment as any).patient?.name || 'P').charAt(0)}
                     </div>
                     <p className="text-xs font-semibold text-text-primary truncate max-w-[150px]">
                         {(treatment as any).patient?.name || 'Sem nome'}
                     </p>
-                </div>
+                </Link>
                 <button {...attributes} {...listeners} className="p-1 text-text-muted hover:text-text-primary transition-colors cursor-grab active:cursor-grabbing">
                     <GripVertical size={14} />
                 </button>

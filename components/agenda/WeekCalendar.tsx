@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
     ChevronLeft,
     ChevronRight,
@@ -20,19 +20,19 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 export function WeekCalendar() {
-    const [currentDate, setCurrentDate] = useState(new Date())
+    const [currentDate, setCurrentDate] = useState<Date | null>(null)
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [loading, setLoading] = useState(true)
     const [isSheetOpen, setIsSheetOpen] = useState(false)
 
-    const startDate = startOfWeek(currentDate, { weekStartsOn: 1 })
+    useEffect(() => {
+        setCurrentDate(new Date())
+    }, [])
+
+    const startDate = currentDate ? startOfWeek(currentDate, { weekStartsOn: 1 }) : startOfWeek(new Date(), { weekStartsOn: 1 })
     const weekDays = Array.from({ length: 6 }).map((_, i) => addDays(startDate, i))
 
-    useEffect(() => {
-        loadAppointments()
-    }, [currentDate])
-
-    async function loadAppointments() {
+    const loadAppointments = useCallback(async () => {
         setLoading(true)
         try {
             const from = startDate
@@ -44,7 +44,11 @@ export function WeekCalendar() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [startDate])
+
+    useEffect(() => {
+        if (currentDate) loadAppointments()
+    }, [currentDate, loadAppointments])
 
     async function handleUpdateStatus(id: string, status: string) {
         try {
@@ -82,11 +86,11 @@ export function WeekCalendar() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <h2 className="text-2xl font-display text-text-primary capitalize">
-                        {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
+                        {currentDate ? format(currentDate, 'MMMM yyyy', { locale: ptBR }) : '...'}
                     </h2>
                     <div className="flex items-center gap-1 bg-bg-surface border border-bg-border rounded-sm p-1">
                         <button
-                            onClick={() => setCurrentDate(subDays(currentDate, 7))}
+                            onClick={() => currentDate && setCurrentDate(subDays(currentDate, 7))}
                             className="p-1 hover:bg-bg-elevated rounded-sm transition-colors text-text-secondary"
                         >
                             <ChevronLeft size={16} />
@@ -98,7 +102,7 @@ export function WeekCalendar() {
                             Hoje
                         </button>
                         <button
-                            onClick={() => setCurrentDate(addDays(currentDate, 7))}
+                            onClick={() => currentDate && setCurrentDate(addDays(currentDate, 7))}
                             className="p-1 hover:bg-bg-elevated rounded-sm transition-colors text-text-secondary"
                         >
                             <ChevronRight size={16} />

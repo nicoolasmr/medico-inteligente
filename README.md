@@ -1,86 +1,77 @@
-# Medico Inteligente — Sistema Operacional de Crescimento para Clínicas
+# Médico Inteligente — O Cérebro da sua Clínica
 
-Plataforma SaaS Healthtech integrada para gestão 360º de consultórios médicos e odontológicos. Focada em precisão clínica, automação de jornada e crescimento estratégico impulsionado por IA.
+A plataforma **Médico Inteligente** é um Sistema Operacional de Crescimento inovador para consultórios médicos e odontológicos. Une gestão 360º (CRM, Agenda, Financeiro) com Inteligência Artificial para identificar oportunidades de lucro e fidelização.
 
-## 🚀 Funcionalidades Principais
+---
 
-### 1. CRM de Pacientes (Prontuário Digital)
-- Gestão completa de pacientes com histórico unificado.
-- Linha do tempo de interações (consultas, exames, mensagens).
-- Tags inteligentes para segmentação e campanhas.
+## 🛠️ Exploração por Módulo
 
-### 2. Agenda Inteligente
-- Calendário semanal moderno e responsivo.
-- Controle de status (Agendado, Confirmado, Realizado, Cancelado).
-- Side sheet para criação rápida de agendamentos sem sair da visão principal.
+### 1. **Crescimento Impulsionado por IA (Insights)**
+Nosso diferencial competitivo. O sistema não apenas guarda dados, ele os analisa.
+- Detecção de gargalos no funil de tratamentos.
+- Recomendações de marketing baseadas em procedimentos mais rentáveis.
+- Análise de churn e sugestões de reativação de pacientes em tempo real.
 
-### 3. Pipeline de Tratamentos (Kanban)
-- Funil de vendas dental/médico com drag-and-drop.
-- Estágios personalizáveis: Lead -> Consulta -> Orçamento -> Aprovado -> Realizado.
-- Visualização de probabilidade e valor projetado.
+### 2. **Pipeline de Tratamentos (High-Performance Kanban)**
+Transforme consultas em faturamento com uma visão clara de negociação.
+- Gestão de orçamentos pendentes.
+- Cálculo automático de probabilidade de fechamento.
+- Drag-and-drop fluido para progressão de casos clínicos.
 
-### 4. IA de Crescimento (Growth AI)
-- Integração profunda com OpenAI (GPT-4o).
-- Análise automática de gargalos no funil de conversão.
-- Recomendações estratégicas de marketing e fidelização baseadas em dados reais da clínica.
+### 3. **Agenda de Precisão**
+Uma visão semanal projetada para zero fricção.
+- Status coloridos para identificação imediata (Confirmado, Atrasado, Realizado).
+- Criação de agendamentos via Side Sheet sem perder o contexto da semana.
+- Lembretes automáticos integrados para reduzir No-Shows.
 
-### 5. Motor de Automações
-- Gatilhos automáticos (Lembretes 24h antes, Pesquisa de satisfação pós-consulta).
-- Integração com WhatsApp e SMS para redução de No-Show.
+### 4. **CRM & Prontuário 3.0**
+Histórico completo e segmentação avançada.
+- Linha do tempo unificada de atendimentos e exames.
+- Tags inteligentes para campanhas personalizadas (ex: "Paciente VIP", "Pós-Op").
 
-### 6. Gestão Financeira
-- Fluxo de caixa com KPIs de receita e ticket médio.
-- Lançamentos por procedimento e controle de inadimplência.
-- Relatórios de performance financeira.
+---
 
-## 🛠️ Stack Tecnológica
+## 🚀 Tecnologias
 
-- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS v4.
-- **UI Components:** shadcn/ui (Radix UI) com tema *Medical Precision Dark*.
-- **Backend:** Next.js Server Actions, Supabase (Auth & Database).
-- **ORM:** Prisma.
-- **Assincronismo:** BullMQ & Redis (Upstash) para filas de mensagens e automações.
-- **IA:** OpenAI SDK.
+- **Frontend:** Next.js 15 (App Router), React 19, Tailwind CSS v4, shadcn/ui.
+- **Backend:** Supabase (Postgres + Auth), Prisma ORM.
+- **IA:** OpenAI API (GPT-4o).
+- **Assincronismo:** BullMQ + Upstash Redis para automações resilientes.
 
-## 📦 Como Instalar
+---
 
-1. **Clone o repositório:**
-```bash
-git clone https://github.com/nicoolasmr/medico-inteligente.git
-cd medico-inteligente
-```
+## 📂 Documentação Técnica
 
-2. **Instale as dependências:**
-```bash
-npm install
-```
+Para detalhes profundos, explore nossa pasta `/DOCS`:
+- [🏛️ Arquitetura do Sistema](DOCS/ARCHITECTURE.md)
+- [🗄️ Modelagem de Banco de Dados](DOCS/DATABASE.md)
+- [🔌 API & Server Actions](DOCS/API.md)
 
-3. **Configure as variáveis de ambiente:**
-Crie um arquivo `.env.local` na raiz com as chaves:
-- `DATABASE_URL` (Supabase Postgres)
-- `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `OPENAI_API_KEY`
-- `UPSTASH_REDIS_URL` & `UPSTASH_REDIS_TOKEN`
+---
 
-4. **Prepare o banco de dados:**
-```bash
-npx prisma generate
-npx prisma db push
-npx tsx prisma/seed.ts
-```
+## 💻 Configuração Local
 
-5. **Inicie o servidor de desenvolvimento:**
-```bash
-npm run dev
-```
+### Requisitos
+- Node.js 20+
+- Instância Supabase (ou Docker Local)
+- Redis (Upstash recomendado)
+- OpenAI API Key
+
+### Passo a Passo
+1. **Instalação:** `npm install`
+2. **Ambiente:** Copie `.env.example` para `.env.local` e preencha as chaves.
+3. **Banco de Dados:**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   npx tsx prisma/seed.ts # Popula com dados demo
+   ```
+4. **Rodar:** `npm run dev`
+
+---
 
 ## 🎨 Design System
+Filosofia **Medical Precision Dark**: Visual premium com foco em legibilidade e precisão técnica. Tons de verde neon sobre fundos escuros para menor cansaço visual e estética "state-of-the-art".
 
-O projeto utiliza a filosofia **Medical Precision Dark**:
-- **Cores:** Teal (#00D4AA) sobre Dark (#0A0D14).
-- **Tipografia:** Outfit (Display) e Inter (Reading).
-- **Componentes:** Bordas afiadas (2-4px) para transmitir seriedade e precisão técnica.
-
-## 📄 Licença
-
-Uso exclusivo para Nicolas Moreira - Plataformas MEDICO-INTELIGENTE.
+---
+Desenvolvido por Nicolas Moreira — 2026.

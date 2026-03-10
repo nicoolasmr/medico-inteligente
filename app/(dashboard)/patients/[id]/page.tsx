@@ -1,7 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import {
+    ArrowLeft,
+    Trash2,
+    MoreVertical,
+    Edit2,
+    FileText,
+    Calendar,
+    CircleDollarSign,
+    Target
+} from 'lucide-react'
 import { getPatient, deletePatient } from '../actions'
 import { PatientProfile } from '@/components/patients/PatientProfile'
 import { PatientHistory } from '@/components/patients/PatientHistory'
@@ -13,8 +24,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ArrowLeft, Trash, MoreVertical, Edit3 } from 'lucide-react'
-import Link from 'next/link'
 import type { Patient } from '@/types'
 import { toast } from 'sonner'
 
@@ -25,11 +34,8 @@ export default function PatientDetailsPage() {
     const [isEditOpen, setIsEditOpen] = useState(false)
     const router = useRouter()
 
-    useEffect(() => {
-        if (id) loadPatient()
-    }, [id])
-
-    async function loadPatient() {
+    const loadPatient = useCallback(async () => {
+        if (!id) return
         try {
             const data = await getPatient(id as string)
             if (!data) {
@@ -43,7 +49,11 @@ export default function PatientDetailsPage() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [id, router])
+
+    useEffect(() => {
+        loadPatient()
+    }, [loadPatient])
 
     async function handleDeletePatient() {
         if (!patient) return
@@ -88,7 +98,7 @@ export default function PatientDetailsPage() {
                         onClick={handleDeletePatient}
                         className="p-2 text-text-muted hover:text-brand-danger transition-colors rounded-sm hover:bg-brand-danger/5"
                     >
-                        <Trash size={18} />
+                        <Trash2 size={18} />
                     </button>
 
                     <DropdownMenu>
@@ -99,7 +109,7 @@ export default function PatientDetailsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem className="gap-2" onClick={() => setIsEditOpen(true)}>
-                                <Edit3 size={14} />
+                                <Edit2 size={14} />
                                 Editar Cadastro
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -126,14 +136,14 @@ export default function PatientDetailsPage() {
                 <TabsContent value="treatments">
                     <div className="card p-12 flex flex-col items-center justify-center text-center border-dashed">
                         <p className="text-text-muted mb-4 uppercase text-xs font-bold tracking-widest">Nenhum tratamento em andamento</p>
-                        <button className="text-brand-primary font-semibold hover:underline text-sm">+ Iniciar Tratamento no Pipeline</button>
+                        <Link href="/pipeline" className="text-brand-primary font-semibold hover:underline text-sm">+ Iniciar Tratamento no Pipeline</Link>
                     </div>
                 </TabsContent>
 
                 <TabsContent value="financial">
                     <div className="card p-12 flex flex-col items-center justify-center text-center border-dashed">
                         <p className="text-text-muted mb-4 uppercase text-xs font-bold tracking-widest">Sem lançamentos financeiros</p>
-                        <button className="text-brand-primary font-semibold hover:underline text-sm">+ Registrar Cobrança</button>
+                        <Link href="/financeiro" className="text-brand-primary font-semibold hover:underline text-sm">+ Registrar Cobrança</Link>
                     </div>
                 </TabsContent>
 

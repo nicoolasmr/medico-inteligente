@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {
     CheckCircle2,
     Clock,
@@ -72,7 +73,13 @@ export function PaymentsTable({ payments }: { payments: Payment[] }) {
                             return (
                                 <tr key={p.id} className="hover:bg-bg-hover/50 transition-colors group">
                                     <td className="px-6 py-4">
-                                        <p className="text-sm font-medium text-text-primary">{(p as any).patient?.name || 'Manual'}</p>
+                                        {p.patientId ? (
+                                            <Link href={`/patients/${p.patientId}?tab=financial`} className="text-sm font-medium text-text-primary hover:text-brand-primary transition-colors">
+                                                {(p as any).patient?.name || 'Carregando...'}
+                                            </Link>
+                                        ) : (
+                                            <p className="text-sm font-medium text-text-primary">Manual</p>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4">
                                         <p className="text-xs text-text-secondary line-clamp-1">{p.description || 'Consulta/Procedimento'}</p>
@@ -117,9 +124,11 @@ export function PaymentsTable({ payments }: { payments: Payment[] }) {
                                                         Marcar como Pago
                                                     </DropdownMenuItem>
                                                 )}
-                                                <DropdownMenuItem className="gap-2">
-                                                    <FileText size={14} />
-                                                    Ver Detalhes
+                                                <DropdownMenuItem className="gap-2" asChild>
+                                                    <Link href={`/patients/${p.patientId}?tab=financial`}>
+                                                        <FileText size={14} />
+                                                        Ver Detalhes
+                                                    </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem className="gap-2 text-brand-danger focus:text-brand-danger">
                                                     <AlertCircle size={14} />

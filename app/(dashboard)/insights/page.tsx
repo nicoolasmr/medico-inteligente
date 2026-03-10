@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { getAiInsights, generateGrowthInsights } from './actions'
 import { InsightGrid } from '@/components/insights/InsightGrid'
 import {
@@ -108,7 +109,7 @@ export default function InsightsPage() {
                     <InsightGrid insights={activeInsights} />
                 ) : (
                     <div className="card p-12 text-center border-dashed border-2">
-                        <p className="text-text-muted italic">Nenhuma análise disponível. Clique em "Gerar Nova Análise" para começar.</p>
+                        <p className="text-text-muted italic">Nenhuma análise disponível. Clique em &quot;Gerar Nova Análise&quot; para começar.</p>
                     </div>
                 )}
             </div>
@@ -142,13 +143,15 @@ export default function InsightsPage() {
                     <h4 className="text-sm font-bold text-text-secondary uppercase tracking-widest mb-6">Recomendações Próximos Passos</h4>
                     <ul className="space-y-4">
                         {[
-                            'Aumentar investimento em anúncios para especialidade "Implantes"',
-                            'Realizar novo treinamento de recepção para conversão de leads',
-                            'Ativar sequência de e-mails para orçamentos pendentes > 7 dias'
+                            { label: 'Aumentar investimento em anúncios para especialidade "Implantes"', href: '/pipeline' },
+                            { label: 'Realizar novo treinamento de recepção para conversão de leads', href: '/dashboard' },
+                            { label: 'Ativar sequência de e-mails para orçamentos pendentes > 7 dias', href: '/automacoes' }
                         ].map((rec, i) => (
-                            <li key={i} className="flex items-start gap-3 text-xs text-text-primary group cursor-pointer hover:text-brand-primary transition-colors">
-                                <div className="w-1.5 h-1.5 rounded-full bg-brand-primary mt-1.5 group-hover:scale-125 transition-transform" />
-                                {rec}
+                            <li key={i}>
+                                <Link href={rec.href} className="flex items-start gap-3 text-xs text-text-primary group cursor-pointer hover:text-brand-primary transition-colors">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-brand-primary mt-1.5 group-hover:scale-125 transition-transform" />
+                                    {rec.label}
+                                </Link>
                             </li>
                         ))}
                     </ul>

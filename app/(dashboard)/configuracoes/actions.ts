@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache'
  */
 export async function getClinicProfile() {
     const clinicId = await getClinicId()
-    return prisma.clinic.findUnique({
+    return prisma.clinic.findFirst({
         where: { id: clinicId }
     })
 }

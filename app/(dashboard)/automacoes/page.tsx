@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect } from 'react'
 import { getAutomations, getAutomationLogs } from './actions'
 import { AutomationList } from '@/components/automacoes/AutomationList'
 import { AutomationLogTable } from '@/components/automacoes/AutomationLogTable'
@@ -14,15 +16,14 @@ export default function AutomacoesPage() {
     const [logs, setLogs] = useState<AutomationLog[]>([])
     const [loading, setLoading] = useState(true)
 
-    // Using useEffect instead of server component for better interactivity with Dialog refresh
-    // and maintaining the modern SPA feel
-    useState(() => {
+    useEffect(() => {
+        setLoading(true)
         Promise.all([getAutomations(), getAutomationLogs()]).then(([a, l]) => {
             setAutomations(a)
             setLogs(l)
             setLoading(false)
         })
-    })
+    }, [])
 
     return (
         <div className="space-y-8 h-full flex flex-col">
@@ -74,7 +75,7 @@ export default function AutomacoesPage() {
                     <div className="card p-6 border-l-4 border-brand-primary bg-brand-primary/5">
                         <h4 className="text-xs font-bold text-text-primary uppercase tracking-widest mb-3">Dica de Crescimento</h4>
                         <p className="text-xs text-text-secondary leading-relaxed mb-4">
-                            Sua taxa de confirmação aumentou em <strong>15%</strong> após ativar os lembretes de 24h. Experimente ativar o fluxo de "Pós-consulta" para coletar reviews automáticos.
+                            Sua taxa de confirmação aumentou em <strong>15%</strong> após ativar os lembretes de 24h. Experimente ativar o fluxo de &quot;Pós-consulta&quot; para coletar reviews automáticos.
                         </p>
                         <button className="text-[10px] font-bold text-brand-primary uppercase tracking-widest hover:underline">
                             Ativar Pós-consulta
