@@ -5,11 +5,11 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { getRevenueSummary, getPayments } from './actions'
-import { RevenueKpis } from '@/components/financeiro/RevenueKpis'
-import { PaymentsTable } from '@/components/financeiro/PaymentsTable'
-import { CreatePaymentDialog } from '@/components/financeiro/CreatePaymentDialog'
+import { RevenueKpis } from '../../../components/financeiro/RevenueKpis'
+import { PaymentsTable } from '../../../components/financeiro/PaymentsTable'
+import { CreatePaymentDialog } from '../../../components/financeiro/CreatePaymentDialog'
 import { Plus, Filter, Search, Download, FileBarChart } from 'lucide-react'
-import type { Payment, RevenueSummary } from '@/types'
+import type { Payment, RevenueSummary } from '../../../types'
 
 export default function FinanceiroPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
