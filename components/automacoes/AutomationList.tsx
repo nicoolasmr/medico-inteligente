@@ -12,9 +12,9 @@ import {
     MoreVertical
 } from 'lucide-react'
 import { useState } from 'react'
-import type { Automation } from '@/types'
-import { cn, timeAgo } from '@/lib/utils'
-import { toggleAutomation, deleteAutomation } from '@/app/(dashboard)/automacoes/actions'
+import type { Automation } from '../../types'
+import { cn, timeAgo } from '../../lib/utils'
+import { toggleAutomation, deleteAutomation } from '../../app/(dashboard)/automacoes/actions'
 import { toast } from 'sonner'
 import * as Switch from '@radix-ui/react-switch'
 import {
@@ -22,7 +22,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '../ui/dropdown-menu'
 
 interface AutomationListProps {
     automations: Automation[]

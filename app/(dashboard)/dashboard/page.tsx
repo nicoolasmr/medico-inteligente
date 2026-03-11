@@ -13,7 +13,9 @@ import {
     Lightbulb,
     Bell
 } from 'lucide-react'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency } from '../../../lib/utils'
+
+type DashboardData = Awaited<ReturnType<typeof getDashboardData>>
 
 type DashboardData = Awaited<ReturnType<typeof getDashboardData>>
 
