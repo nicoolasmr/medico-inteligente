@@ -1,4 +1,4 @@
-import '@/app/globals.css'
+import '../globals.css'
 import { Toaster } from 'sonner'
 import { LogOut, UserCircle } from 'lucide-react'
 

@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { requireEnv } from '@/lib/env'
+import { requireEnv } from './env'
 
 const globalForOpenAI = globalThis as unknown as {
     openai: OpenAI | undefined
