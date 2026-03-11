@@ -1,8 +1,8 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
-import { getClinicId, getCurrentUser } from '@/lib/auth'
-import type { DashboardKpis, SmartAlert } from '@/types'
+import { prisma } from '../../../lib/prisma'
+import { getClinicId, getCurrentUser } from '../../../lib/auth'
+import type { DashboardKpis, SmartAlert } from '../../../types'
 import { startOfMonth, endOfMonth, subMonths, subDays } from 'date-fns'
 
 function getTrend(current: number, previous: number): number {

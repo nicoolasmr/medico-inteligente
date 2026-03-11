@@ -7,7 +7,7 @@ import {
     ShieldCheck,
     MessageCircle
 } from 'lucide-react'
-import { cn, formatDate, formatTime } from '@/lib/utils'
+import { cn, formatDate, formatTime } from '../../lib/utils'
 
 export default function PatientPortalPage() {
     const appointments = [

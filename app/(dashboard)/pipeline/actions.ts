@@ -1,10 +1,10 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
-import { getClinicId } from '@/lib/auth'
+import { prisma } from '../../../lib/prisma'
+import { getClinicId } from '../../../lib/auth'
 import { revalidatePath } from 'next/cache'
-import { createTreatmentSchema, updateTreatmentSchema, type CreateTreatmentInput, type UpdateTreatmentInput } from '@/lib/validations/treatment'
-import type { Treatment, TreatmentsByStage, ActionResult } from '@/types'
+import { createTreatmentSchema, updateTreatmentSchema, type CreateTreatmentInput, type UpdateTreatmentInput } from '../../../lib/validations/treatment'
+import type { Treatment, TreatmentsByStage, ActionResult } from '../../../types'
 
 const STAGES = ['lead', 'consulta_realizada', 'tratamento_indicado', 'orcamento_enviado', 'aprovado', 'realizado']
 

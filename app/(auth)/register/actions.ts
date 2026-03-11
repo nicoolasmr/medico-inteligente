@@ -1,8 +1,8 @@
 'use server'
 
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createAdminClient } from '../../../lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { slugify } from '@/lib/utils'
+import { slugify } from '../../../lib/utils'
 
 export async function registerClinic(data: {
     userName: string
