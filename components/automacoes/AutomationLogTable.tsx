@@ -7,8 +7,8 @@ import {
     ChevronRight,
     History
 } from 'lucide-react'
-import type { AutomationLog } from '@/types'
-import { cn, timeAgo, formatDateTime } from '@/lib/utils'
+import type { AutomationLog } from '../../types'
+import { cn, timeAgo, formatDateTime } from '../../lib/utils'
 
 export function AutomationLogTable({ logs }: { logs: AutomationLog[] }) {
     return (
