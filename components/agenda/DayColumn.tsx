@@ -1,7 +1,7 @@
 import { format, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { cn, formatTime } from '@/lib/utils'
-import type { Appointment } from '@/types'
+import { cn, formatTime } from '../../lib/utils'
+import type { Appointment } from '../../types'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -9,7 +9,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '../ui/dropdown-menu'
 import { CheckCircle2, XCircle, Clock, Ban, User, MoreHorizontal, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 

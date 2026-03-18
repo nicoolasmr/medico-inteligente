@@ -7,8 +7,8 @@ import {
     ArrowUpRight,
     TrendingDown
 } from 'lucide-react'
-import { cn, formatCurrency } from '@/lib/utils'
-import type { RevenueSummary } from '@/types'
+import { cn, formatCurrency } from '../../lib/utils'
+import type { RevenueSummary } from '../../types'
 
 export function RevenueKpis({ summary }: { summary: RevenueSummary }) {
     const kpis = [

@@ -14,17 +14,17 @@ import {
     Target
 } from 'lucide-react'
 import { getPatient, deletePatient } from '../actions'
-import { PatientProfile } from '@/components/patients/PatientProfile'
-import { PatientHistory } from '@/components/patients/PatientHistory'
-import { EditPatientDialog } from '@/components/patients/EditPatientDialog'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { PatientProfile } from '../../../../components/patients/PatientProfile'
+import { PatientHistory } from '../../../../components/patients/PatientHistory'
+import { EditPatientDialog } from '../../../../components/patients/EditPatientDialog'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../components/ui/tabs'
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import type { Patient } from '@/types'
+} from '../../../../components/ui/dropdown-menu'
+import type { Patient } from '../../../../types'
 import { toast } from 'sonner'
 
 export default function PatientDetailsPage() {

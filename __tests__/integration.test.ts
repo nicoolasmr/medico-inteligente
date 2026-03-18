@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createPatient } from '@/app/(dashboard)/patients/actions'
-import { createAppointment } from '@/app/(dashboard)/agenda/actions'
-import { prisma } from '@/lib/prisma'
-import { getClinicId } from '@/lib/auth'
+import { createPatient } from '../app/(dashboard)/patients/actions'
+import { createAppointment } from '../app/(dashboard)/agenda/actions'
+import { prisma } from '../lib/prisma'
+import { getClinicId } from '../lib/auth'
 
-vi.mock('@/lib/prisma', () => ({
+vi.mock('../lib/prisma', () => ({
     prisma: {
         patient: {
             create: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock('@/lib/prisma', () => ({
     },
 }))
 
-vi.mock('@/lib/auth', () => ({
+vi.mock('../lib/auth', () => ({
     getClinicId: vi.fn(),
 }))
 
