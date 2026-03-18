@@ -1,9 +1,10 @@
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
+import { requireEnv } from './env'
 
 const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    url: requireEnv('UPSTASH_REDIS_REST_URL', { context: 'rate limiting' }),
+    token: requireEnv('UPSTASH_REDIS_REST_TOKEN', { context: 'rate limiting' }),
 })
 
 /** Auth endpoints: 5 attempts per minute per email/IP */
