@@ -10,7 +10,7 @@ import {
     CheckCircle2,
     Clock
 } from 'lucide-react'
-import { cn, timeAgo } from '@/lib/utils'
+import { cn, timeAgo } from '../../lib/utils'
 
 // Mock interactions for now (will be replaced by generic Interaction type later)
 const MOCK_INTERACTIONS = [

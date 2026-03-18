@@ -10,16 +10,16 @@ import {
     DialogTitle,
     DialogDescription,
     DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { createPaymentSchema, type CreatePaymentInput } from '@/lib/validations/payment'
-import { createPayment } from '@/app/(dashboard)/financeiro/actions'
-import { searchPatients } from '@/app/(dashboard)/patients/actions'
+} from '../ui/dialog'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { createPaymentSchema, type CreatePaymentInput } from '../../lib/validations/payment'
+import { createPayment } from '../../app/(dashboard)/financeiro/actions'
+import { searchPatients } from '../../app/(dashboard)/patients/actions'
 import { toast } from 'sonner'
 import { Banknote, Search, Calendar, User } from 'lucide-react'
-import type { Patient } from '@/types'
-import { cn } from '@/lib/utils'
+import type { Patient } from '../../types'
+import { cn } from '../../lib/utils'
 
 interface CreatePaymentDialogProps {
     open: boolean

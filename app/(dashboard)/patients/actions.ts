@@ -1,10 +1,10 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
-import { getClinicId } from '@/lib/auth'
+import { prisma } from '../../../lib/prisma'
+import { getClinicId } from '../../../lib/auth'
 import { revalidatePath } from 'next/cache'
-import { createPatientSchema, type CreatePatientInput, updatePatientSchema, type UpdatePatientInput } from '@/lib/validations/patient'
-import type { Patient, ActionResult } from '@/types'
+import { createPatientSchema, type CreatePatientInput, updatePatientSchema, type UpdatePatientInput } from '../../../lib/validations/patient'
+import type { Patient, ActionResult } from '../../../types'
 
 /**
  * Get all patients for the clinic
