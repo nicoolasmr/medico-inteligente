@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { apiRatelimit } from '@/lib/ratelimit'
+import { apiRatelimit } from './lib/ratelimit'
 
 const PROTECTED_PREFIXES = [
     '/dashboard',
