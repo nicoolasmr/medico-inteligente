@@ -2,12 +2,12 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '../../../lib/supabase/client'
 
-export default function LoginPage() {
+function LoginForm() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
@@ -91,5 +91,13 @@ export default function LoginPage() {
                 </div>
             </form>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="auth-card"><div className="auth-form text-sm text-text-secondary">Carregando login...</div></div>}>
+            <LoginForm />
+        </Suspense>
     )
 }
