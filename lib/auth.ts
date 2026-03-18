@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from './supabase/server'
 import { redirect } from 'next/navigation'
-import type { User } from '@/types'
+import type { User } from '../types'
 
 /**
  * Get the current authenticated user with clinic context.

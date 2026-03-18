@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '../../../lib/supabase/client'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
@@ -31,48 +31,40 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="card p-8 w-full">
-            <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Email</label>
+        <div className="auth-card">
+            <form onSubmit={handleLogin} className="auth-form">
+                <div className="auth-field">
+                    <label className="auth-label">Email</label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-2 rounded-sm bg-bg-elevated border border-bg-border focus:border-brand-primary outline-none text-text-primary transition-colors"
+                        className="auth-input"
                         placeholder="seu@email.com"
                         required
                     />
                 </div>
-                <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Senha</label>
+                <div className="auth-field">
+                    <label className="auth-label">Senha</label>
                     <input
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-2 rounded-sm bg-bg-elevated border border-bg-border focus:border-brand-primary outline-none text-text-primary transition-colors"
+                        className="auth-input"
                         placeholder="••••••••"
                         required
                     />
                 </div>
 
-                {error && (
-                    <p className="text-brand-danger text-sm bg-brand-danger/10 p-2 rounded-sm border border-brand-danger/20">
-                        {error}
-                    </p>
-                )}
+                {error && <p className="auth-error">{error}</p>}
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-2 bg-brand-primary hover:bg-brand-accent text-bg-app font-semibold rounded-sm transition-colors shadow-glow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <button type="submit" disabled={loading} className="auth-submit">
                     {loading ? 'Entrando...' : 'Entrar na Plataforma'}
                 </button>
 
-                <div className="flex justify-between items-center pt-2">
-                    <Link href="/forgot-password" className="text-xs text-text-muted hover:text-brand-primary transition-colors">Esqueceu a senha?</Link>
-                    <Link href="/register" className="text-xs text-brand-primary hover:underline">Criar nova clínica</Link>
+                <div className="auth-links">
+                    <Link href="/forgot-password" className="auth-link">Esqueceu a senha?</Link>
+                    <Link href="/register" className="auth-link auth-link--primary">Criar nova clínica</Link>
                 </div>
             </form>
         </div>

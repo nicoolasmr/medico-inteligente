@@ -1,6 +1,6 @@
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Header } from '@/components/layout/Header'
-import { getCurrentUser } from '@/lib/auth'
+import { Sidebar } from '../../components/layout/Sidebar'
+import { Header } from '../../components/layout/Header'
+import { getCurrentUser } from '../../lib/auth'
 
 export default async function DashboardLayout({
     children,
