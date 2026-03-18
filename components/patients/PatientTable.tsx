@@ -13,8 +13,8 @@ import {
     ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
-import type { Patient } from '@/types'
-import { cn, formatDate } from '@/lib/utils'
+import type { Patient } from '../../types'
+import { cn, formatDate } from '../../lib/utils'
 
 interface PatientTableProps {
     patients: Patient[]

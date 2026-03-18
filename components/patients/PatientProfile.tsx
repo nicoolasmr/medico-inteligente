@@ -1,8 +1,8 @@
 'use client'
 
-import { Patient } from '@/types'
+import { Patient } from '../../types'
 import { User, Phone, Mail, FileText, Calendar, MapPin, Tag } from 'lucide-react'
-import { formatDate, getInitials } from '@/lib/utils'
+import { formatDate, getInitials } from '../../lib/utils'
 
 interface PatientProfileProps {
     patient: Patient

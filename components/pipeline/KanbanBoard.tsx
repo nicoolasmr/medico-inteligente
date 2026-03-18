@@ -21,8 +21,8 @@ import {
 } from '@dnd-kit/sortable'
 import { KanbanColumn } from './KanbanColumn'
 import { TreatmentCard } from './TreatmentCard'
-import type { Treatment, TreatmentsByStage } from '@/types'
-import { moveTreatment } from '@/app/(dashboard)/pipeline/actions'
+import type { Treatment, TreatmentsByStage } from '../../types'
+import { moveTreatment } from '../../app/(dashboard)/pipeline/actions'
 import { toast } from 'sonner'
 
 const COLUMNS = [

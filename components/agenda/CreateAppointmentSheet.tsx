@@ -9,16 +9,16 @@ import {
     SheetHeader,
     SheetTitle,
     SheetDescription,
-} from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { createAppointmentSchema, type CreateAppointmentInput } from '@/lib/validations/appointment'
-import { createAppointment } from '@/app/(dashboard)/agenda/actions'
-import { searchPatients } from '@/app/(dashboard)/patients/actions'
+} from '../ui/sheet'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { createAppointmentSchema, type CreateAppointmentInput } from '../../lib/validations/appointment'
+import { createAppointment } from '../../app/(dashboard)/agenda/actions'
+import { searchPatients } from '../../app/(dashboard)/patients/actions'
 import { toast } from 'sonner'
 import { Calendar, Clock, User, FileText, Search } from 'lucide-react'
-import type { Patient } from '@/types'
-import { cn } from '@/lib/utils'
+import type { Patient } from '../../types'
+import { cn } from '../../lib/utils'
 
 interface CreateAppointmentSheetProps {
     open: boolean
