@@ -1,10 +1,10 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
-import { getClinicId } from '@/lib/auth'
+import { prisma } from '../../../lib/prisma'
+import { getClinicId } from '../../../lib/auth'
 import { revalidatePath } from 'next/cache'
-import { createPaymentSchema, type CreatePaymentInput } from '@/lib/validations/payment'
-import type { Payment, RevenueSummary, ActionResult } from '@/types'
+import { createPaymentSchema, type CreatePaymentInput } from '../../../lib/validations/payment'
+import type { Payment, RevenueSummary, ActionResult } from '../../../types'
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 

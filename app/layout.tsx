@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     keywords: ['consultório médico', 'CRM médico', 'agenda médica', 'gestão clínica', 'healthtech'],
     authors: [{ name: 'Médico Inteligente' }],
     robots: { index: false, follow: false }, // Private SaaS — not indexed
-    icons: { icon: '/favicon.ico' },
+    icons: { icon: '/icon.svg' },
 }
 
 export default function RootLayout({
