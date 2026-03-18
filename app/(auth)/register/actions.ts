@@ -14,6 +14,22 @@ type RegisterClinicResult =
     | { success: true; redirectTo: string }
     | { success: false; error: string }
 
+function normalizeRegistrationError(message: string) {
+    if (message.includes('already been registered') || message.includes('User already registered')) {
+        return 'Este e-mail já está cadastrado. Tente fazer login.'
+    }
+
+    if (message.includes('duplicate key') || message.includes('clinics_slug_key')) {
+        return 'Já existe uma clínica com esse identificador. Tente outro nome.'
+    }
+
+    if (message.includes('Missing required environment variable')) {
+        return 'Configuração do Supabase incompleta no ambiente. Revise as variáveis da Vercel.'
+    }
+
+    return message
+}
+
 async function generateClinicSlug(clinicName: string) {
     const supabaseAdmin = createAdminClient()
     const baseSlug = slugify(clinicName)
@@ -123,7 +139,7 @@ export async function registerClinic(data: RegisterClinicInput): Promise<Registe
             await supabaseAdmin.auth.admin.deleteUser(createdUserId)
         }
 
-        const message = error instanceof Error ? error.message : 'Não foi possível criar sua conta agora.'
-        return { success: false, error: message }
+        const rawMessage = error instanceof Error ? error.message : 'Não foi possível criar sua conta agora.'
+        return { success: false, error: normalizeRegistrationError(rawMessage) }
     }
 }

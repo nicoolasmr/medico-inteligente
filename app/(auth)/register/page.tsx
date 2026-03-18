@@ -6,11 +6,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { registerClinic } from './actions'
+import { createClient } from '../../../lib/supabase/client'
 
 export default function RegisterPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
+    const supabase = createClient()
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -31,6 +33,25 @@ export default function RegisterPage() {
             setError(result.error)
             setLoading(false)
             return
+        }
+
+        try {
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email: data.email,
+                password: data.password,
+            })
+
+            if (signInError) {
+                router.push(result.redirectTo)
+                router.refresh()
+                return
+            }
+
+            router.push('/dashboard')
+            router.refresh()
+        } catch (err) {
+            router.push(result.redirectTo)
+            router.refresh()
         }
 
         router.push(result.redirectTo)
@@ -62,6 +83,10 @@ export default function RegisterPage() {
                 <button type="submit" disabled={loading} className="auth-submit">
                     {loading ? 'Criando clínica...' : 'Criar Conta e Clínica'}
                 </button>
+
+                <p className="text-center text-xs text-text-muted">
+                    O acesso é liberado imediatamente após o cadastro. Não é necessário esperar e-mail de confirmação.
+                </p>
 
                 <div className="auth-links auth-links--center">
                     <Link href="/login" className="auth-link">Já possui conta? Entrar</Link>
