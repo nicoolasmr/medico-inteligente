@@ -4,11 +4,13 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { registerClinic } from './actions'
 
 export default function RegisterPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const router = useRouter()
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -23,12 +25,16 @@ export default function RegisterPage() {
             password: formData.get('password') as string,
         }
 
-        try {
-            await registerClinic(data)
-        } catch (err: any) {
-            setError(err.message)
+        const result = await registerClinic(data)
+
+        if (!result.success) {
+            setError(result.error)
             setLoading(false)
+            return
         }
+
+        router.push(result.redirectTo)
+        router.refresh()
     }
 
     return (
