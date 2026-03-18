@@ -8,8 +8,6 @@ import { cn, formatCurrency, formatDateTime } from '../../../lib/utils'
 
 type DashboardData = Awaited<ReturnType<typeof getDashboardData>>
 
-type DashboardData = Awaited<ReturnType<typeof getDashboardData>>
-
 export default function DashboardPage() {
     const [data, setData] = useState<DashboardData | null>(null)
     const [loading, setLoading] = useState(true)
