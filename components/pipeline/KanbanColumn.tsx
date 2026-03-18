@@ -6,8 +6,8 @@ import {
     verticalListSortingStrategy
 } from '@dnd-kit/sortable'
 import { TreatmentCard } from './TreatmentCard'
-import type { Treatment } from '@/types'
-import { cn } from '@/lib/utils'
+import type { Treatment } from '../../types'
+import { cn } from '../../lib/utils'
 import { Plus, MoreHorizontal } from 'lucide-react'
 
 interface KanbanColumnProps {

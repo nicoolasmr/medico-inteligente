@@ -2,79 +2,102 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { createClient } from '../../../lib/supabase/client'
 
-export default function LoginPage() {
+function LoginForm() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
+    const searchParams = useSearchParams()
     const supabase = createClient()
+
+    const notice = useMemo(() => {
+        if (searchParams.get('registered') === 'true') {
+            return 'Conta criada com sucesso. Faça login para acessar a plataforma.'
+        }
+
+        if (searchParams.get('error') === 'profile_not_found') {
+            return 'Seu acesso foi autenticado, mas o perfil interno da clínica precisou ser reprocessado. Tente entrar novamente.'
+        }
+
+        return null
+    }, [searchParams])
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault()
         setLoading(true)
         setError(null)
 
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        try {
+            const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
-        if (error) {
-            setError(error.message)
-            setLoading(false)
-        } else {
+            if (signInError) {
+                setError(signInError.message)
+                setLoading(false)
+                return
+            }
+
             router.push('/dashboard')
+            router.refresh()
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Não foi possível autenticar agora.'
+            setError(message)
+            setLoading(false)
         }
     }
 
     return (
-        <div className="card p-8 w-full">
-            <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Email</label>
+        <div className="auth-card">
+            <form onSubmit={handleLogin} className="auth-form">
+                {notice && <p className="rounded-sm border border-brand-primary/30 bg-brand-primary/10 px-4 py-3 text-sm text-brand-primary">{notice}</p>}
+
+                <div className="auth-field">
+                    <label className="auth-label">Email</label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-2 rounded-sm bg-bg-elevated border border-bg-border focus:border-brand-primary outline-none text-text-primary transition-colors"
+                        className="auth-input"
                         placeholder="seu@email.com"
                         required
                     />
                 </div>
-                <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Senha</label>
+                <div className="auth-field">
+                    <label className="auth-label">Senha</label>
                     <input
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-2 rounded-sm bg-bg-elevated border border-bg-border focus:border-brand-primary outline-none text-text-primary transition-colors"
+                        className="auth-input"
                         placeholder="••••••••"
                         required
                     />
                 </div>
 
-                {error && (
-                    <p className="text-brand-danger text-sm bg-brand-danger/10 p-2 rounded-sm border border-brand-danger/20">
-                        {error}
-                    </p>
-                )}
+                {error && <p className="auth-error">{error}</p>}
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-2 bg-brand-primary hover:bg-brand-accent text-bg-app font-semibold rounded-sm transition-colors shadow-glow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <button type="submit" disabled={loading} className="auth-submit">
                     {loading ? 'Entrando...' : 'Entrar na Plataforma'}
                 </button>
 
-                <div className="flex justify-between items-center pt-2">
-                    <Link href="/forgot-password" className="text-xs text-text-muted hover:text-brand-primary transition-colors">Esqueceu a senha?</Link>
-                    <Link href="/register" className="text-xs text-brand-primary hover:underline">Criar nova clínica</Link>
+                <div className="auth-links">
+                    <Link href="/forgot-password" className="auth-link">Esqueceu a senha?</Link>
+                    <Link href="/register" className="auth-link auth-link--primary">Criar nova clínica</Link>
                 </div>
             </form>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="auth-card"><div className="auth-form text-sm text-text-secondary">Carregando login...</div></div>}>
+            <LoginForm />
+        </Suspense>
     )
 }

@@ -1,10 +1,10 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
-import { getClinicId } from '@/lib/auth'
+import { prisma } from '../../../lib/prisma'
+import { getClinicId } from '../../../lib/auth'
 import { revalidatePath } from 'next/cache'
-import { openai } from '@/lib/openai'
-import type { AiInsight, ActionResult } from '@/types'
+import { openai } from '../../../lib/openai'
+import type { AiInsight, ActionResult } from '../../../types'
 
 /**
  * Get existing AI insights for the clinic
