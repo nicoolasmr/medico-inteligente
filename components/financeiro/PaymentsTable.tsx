@@ -11,16 +11,16 @@ import {
     Banknote,
     Smartphone
 } from 'lucide-react'
-import type { Payment } from '@/types'
-import { cn, formatCurrency, formatDate } from '@/lib/utils'
-import { markAsPaid } from '@/app/(dashboard)/financeiro/actions'
+import type { Payment } from '../../types'
+import { cn, formatCurrency, formatDate } from '../../lib/utils'
+import { markAsPaid } from '../../app/(dashboard)/financeiro/actions'
 import { toast } from 'sonner'
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '../ui/dropdown-menu'
 
 const STATUS_CONFIG: Record<string, any> = {
     paid: { label: 'Pago', icon: CheckCircle2, className: 'bg-brand-success/10 text-brand-success outline-brand-success/20' },

@@ -4,12 +4,12 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
 import { UserPlus, Search, Filter, Download, Users as UsersIcon } from 'lucide-react'
-import { PatientTable } from '@/components/patients/PatientTable'
-import { AddPatientDialog } from '@/components/patients/AddPatientDialog'
-import { EditPatientDialog } from '@/components/patients/EditPatientDialog'
-import { PatientTableSkeleton } from '@/components/patients/PatientTableSkeleton'
+import { PatientTable } from '../../../components/patients/PatientTable'
+import { AddPatientDialog } from '../../../components/patients/AddPatientDialog'
+import { EditPatientDialog } from '../../../components/patients/EditPatientDialog'
+import { PatientTableSkeleton } from '../../../components/patients/PatientTableSkeleton'
 import { getPatients, deletePatient } from './actions'
-import type { Patient } from '@/types'
+import type { Patient } from '../../../types'
 import { toast } from 'sonner'
 
 export default function PatientsPage() {

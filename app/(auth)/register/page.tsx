@@ -4,11 +4,13 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { registerClinic } from './actions'
 
 export default function RegisterPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const router = useRouter()
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -23,74 +25,46 @@ export default function RegisterPage() {
             password: formData.get('password') as string,
         }
 
-        try {
-            await registerClinic(data)
-        } catch (err: any) {
-            setError(err.message)
+        const result = await registerClinic(data)
+
+        if (!result.success) {
+            setError(result.error)
             setLoading(false)
+            return
         }
+
+        router.push(result.redirectTo)
+        router.refresh()
     }
 
     return (
-        <div className="card p-8 w-full">
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Seu Nome</label>
-                    <input
-                        name="userName"
-                        type="text"
-                        className="w-full px-4 py-2 rounded-sm bg-bg-elevated border border-bg-border focus:border-brand-primary outline-none text-text-primary"
-                        placeholder="Ex: Dr. Fulano"
-                        required
-                    />
+        <div className="auth-card">
+            <form onSubmit={handleSubmit} className="auth-form">
+                <div className="auth-field">
+                    <label className="auth-label">Seu Nome</label>
+                    <input name="userName" type="text" className="auth-input" placeholder="Ex: Dr. Fulano" required />
                 </div>
-                <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Nome da Clínica</label>
-                    <input
-                        name="clinicName"
-                        type="text"
-                        className="w-full px-4 py-2 rounded-sm bg-bg-elevated border border-bg-border focus:border-brand-primary outline-none text-text-primary"
-                        placeholder="Ex: Clínica MedVida"
-                        required
-                    />
+                <div className="auth-field">
+                    <label className="auth-label">Nome da Clínica</label>
+                    <input name="clinicName" type="text" className="auth-input" placeholder="Ex: Clínica MedVida" required />
                 </div>
-                <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Email Profissional</label>
-                    <input
-                        name="email"
-                        type="email"
-                        className="w-full px-4 py-2 rounded-sm bg-bg-elevated border border-bg-border focus:border-brand-primary outline-none text-text-primary"
-                        placeholder="doutor@clinica.com"
-                        required
-                    />
+                <div className="auth-field">
+                    <label className="auth-label">Email Profissional</label>
+                    <input name="email" type="email" className="auth-input" placeholder="doutor@clinica.com" required />
                 </div>
-                <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Senha de Acesso</label>
-                    <input
-                        name="password"
-                        type="password"
-                        className="w-full px-4 py-2 rounded-sm bg-bg-elevated border border-bg-border focus:border-brand-primary outline-none text-text-primary"
-                        placeholder="••••••••"
-                        required
-                    />
+                <div className="auth-field">
+                    <label className="auth-label">Senha de Acesso</label>
+                    <input name="password" type="password" className="auth-input" placeholder="••••••••" required />
                 </div>
 
-                {error && (
-                    <p className="text-brand-danger text-sm bg-brand-danger/10 p-2 rounded-sm border border-brand-danger/20">
-                        {error}
-                    </p>
-                )}
+                {error && <p className="auth-error">{error}</p>}
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-2 bg-brand-primary hover:bg-brand-accent text-bg-app font-semibold rounded-sm transition-colors shadow-glow-sm disabled:opacity-50"
-                >
+                <button type="submit" disabled={loading} className="auth-submit">
                     {loading ? 'Criando clínica...' : 'Criar Conta e Clínica'}
                 </button>
 
-                <div className="pt-2 text-center">
-                    <Link href="/login" className="text-xs text-text-muted hover:text-brand-primary transition-colors">Já possui conta? Entrar</Link>
+                <div className="auth-links auth-links--center">
+                    <Link href="/login" className="auth-link">Já possui conta? Entrar</Link>
                 </div>
             </form>
         </div>
