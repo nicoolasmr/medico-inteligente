@@ -17,10 +17,15 @@ export type AutomationRuntimeStatus = {
     message?: string
 }
 
-type TriggerPayload = AutomationPayload
+const AUTOMATION_UNAVAILABLE_MESSAGE = 'Automações estão em modo somente leitura no momento. Configure o REDIS_URL para reativar execuções e agendamentos.'
 
 function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback
+}
+
+function isRedisUnavailableError(error: unknown) {
+    return error instanceof RedisUnavailableError
+        || (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'REDIS_UNAVAILABLE')
 }
 
 function getAutomationRuntimeStatus(): AutomationRuntimeStatus {
@@ -146,7 +151,7 @@ export async function triggerEvent(event: string, payload: TriggerPayload): Prom
 
         return { success: true, data: null }
     } catch (error: unknown) {
-        const message = error instanceof RedisUnavailableError
+        const message = isRedisUnavailableError(error)
             ? AUTOMATION_UNAVAILABLE_MESSAGE
             : getErrorMessage(error, AUTOMATION_UNAVAILABLE_MESSAGE)
 

@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const redirect = vi.fn(() => { throw new Error('Redirect') })
 const getClinicId = vi.fn()
+const getAuthenticatedPatientPortalSession = vi.fn()
+const setCookie = vi.fn()
 const headersMock = vi.fn()
 const cookiesMock = vi.fn()
 const prisma = {
-    patient: { findFirst: vi.fn() },
+    patient: { findUnique: vi.fn() },
     appointment: { findMany: vi.fn() },
     payment: { findMany: vi.fn() },
 }
@@ -14,7 +16,12 @@ const getSession = vi.fn()
 const createServerClient = vi.fn()
 
 vi.mock('next/navigation', () => ({ redirect }))
-vi.mock('../lib/auth', () => ({ getClinicId }))
+vi.mock('../lib/auth', () => ({
+    createPortalAccessToken: vi.fn(async () => null),
+    establishPatientPortalSession: vi.fn(),
+    getAuthenticatedPatientPortalSession,
+    getClinicId,
+}))
 vi.mock('next/headers', () => ({ headers: headersMock, cookies: cookiesMock }))
 vi.mock('../lib/prisma', () => ({ prisma }))
 vi.mock('./../lib/ratelimit', () => ({ apiRatelimit }))
@@ -35,8 +42,9 @@ describe('portal isolation and middleware protection', () => {
         vi.resetModules()
         vi.clearAllMocks()
         getClinicId.mockResolvedValue('clinic-123')
+        getAuthenticatedPatientPortalSession.mockResolvedValue(null)
         headersMock.mockResolvedValue({ get: vi.fn(() => null) })
-        cookiesMock.mockResolvedValue({ get: vi.fn(() => undefined) })
+        cookiesMock.mockResolvedValue({ get: vi.fn(() => undefined), set: setCookie })
         apiRatelimit.limit.mockResolvedValue({ success: true })
         getSession.mockResolvedValue({ data: { session: null } })
         createServerClient.mockReturnValue({ auth: { getSession } })
@@ -50,26 +58,48 @@ describe('portal isolation and middleware protection', () => {
         expect(redirect).toHaveBeenCalledWith('/login?error=portal_identity_required')
     })
 
-    it('should isolate portal data by patient identity and token', async () => {
-        const { createPortalAccessToken } = await import('../lib/portal-auth')
-        const token = createPortalAccessToken('clinic-123', 'patient-1')
-        headersMock.mockResolvedValue({
-            get: vi.fn((key: string) => {
-                if (key === 'x-portal-patient-id') return 'patient-1'
-                if (key === 'x-portal-access-token') return token
-                return null
-            }),
+    it('should isolate portal data by authenticated patient session', async () => {
+        getAuthenticatedPatientPortalSession.mockResolvedValue({
+            clinicId: 'clinic-123',
+            patientId: 'patient-1',
+            token: 'patient-session-token',
+            expiresAt: new Date('2030-01-01T00:00:00.000Z'),
         })
-        prisma.patient.findFirst.mockResolvedValue({ id: 'patient-1', name: 'Alice Silva', phone: '11999999999' })
+        prisma.patient.findUnique.mockResolvedValue({
+            id: 'patient-1',
+            clinicId: 'clinic-123',
+            name: 'Alice Silva',
+            phone: '11999999999',
+        })
         prisma.appointment.findMany.mockResolvedValue([])
         prisma.payment.findMany.mockResolvedValue([])
 
         const PatientPortalPage = (await import('../app/portal/page')).default
         await PatientPortalPage()
 
-        expect(prisma.patient.findFirst).toHaveBeenCalledWith({ where: { clinicId: 'clinic-123', id: 'patient-1' } })
+        expect(getAuthenticatedPatientPortalSession).toHaveBeenCalled()
+        expect(prisma.patient.findUnique).toHaveBeenCalledWith({ where: { id: 'patient-1' } })
         expect(prisma.appointment.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ clinicId: 'clinic-123', patientId: 'patient-1' }) }))
         expect(prisma.payment.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ clinicId: 'clinic-123', patientId: 'patient-1' }) }))
+    })
+
+    it('should block access when authenticated session points to another clinic', async () => {
+        getAuthenticatedPatientPortalSession.mockResolvedValue({
+            clinicId: 'clinic-123',
+            patientId: 'patient-1',
+            token: 'patient-session-token',
+            expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+        })
+        prisma.patient.findUnique.mockResolvedValue({
+            id: 'patient-1',
+            clinicId: 'clinic-999',
+            name: 'Alice Silva',
+        })
+
+        const PatientPortalPage = (await import('../app/portal/page')).default
+        await expect(PatientPortalPage()).rejects.toThrow('Portal patient not found for current identity')
+        expect(prisma.appointment.findMany).not.toHaveBeenCalled()
+        expect(prisma.payment.findMany).not.toHaveBeenCalled()
     })
 
     it('should protect authenticated routes by redirecting anonymous requests', async () => {
