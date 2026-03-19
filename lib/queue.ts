@@ -1,14 +1,53 @@
 import { Queue } from 'bullmq'
-import { redis as connection } from './redis'
+import { getRedis } from './redis'
+
+let reminderQueue: Queue | null = null
+let noReturnQueue: Queue | null = null
+let whatsappQueue: Queue | null = null
+let automationQueue: Queue | null = null
 
 /** Queue: appointment reminder jobs (24h before) */
-export const reminderQueue = new Queue('appointment-reminders', { connection })
+export function getReminderQueue() {
+    if (!reminderQueue) {
+        reminderQueue = new Queue('appointment-reminders', { connection: getRedis() })
+    }
+
+    return reminderQueue
+}
 
 /** Queue: patient no-return detection (cron-driven) */
-export const noReturnQueue = new Queue('patient-no-return', { connection })
+export function getNoReturnQueue() {
+    if (!noReturnQueue) {
+        noReturnQueue = new Queue('patient-no-return', { connection: getRedis() })
+    }
+
+    return noReturnQueue
+}
 
 /** Queue: outbound WhatsApp messages */
-export const whatsappQueue = new Queue('whatsapp-messages', { connection })
+export function getWhatsAppQueue() {
+    if (!whatsappQueue) {
+        whatsappQueue = new Queue('whatsapp-messages', { connection: getRedis() })
+    }
+
+    return whatsappQueue
+}
+
+/** Queue: automation rules */
+export function getAutomationQueue() {
+    if (!automationQueue) {
+        automationQueue = new Queue('automations', { connection: getRedis() })
+    }
+
+    return automationQueue
+}
+
+export function resetQueuesForTests() {
+    reminderQueue = null
+    noReturnQueue = null
+    whatsappQueue = null
+    automationQueue = null
+}
 
 export type AppointmentReminderJob = {
     patientPhone: string
