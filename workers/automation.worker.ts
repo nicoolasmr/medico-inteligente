@@ -1,6 +1,6 @@
 import { Job, Worker } from 'bullmq'
 import { prisma } from '../lib/prisma'
-import { redis } from '../lib/redis'
+import { getRedis } from '../lib/redis'
 import { sendWhatsApp } from '../lib/whatsapp'
 
 type WorkerPayload = {

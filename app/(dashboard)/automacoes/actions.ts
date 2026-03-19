@@ -1,10 +1,10 @@
 'use server'
 
-import { Queue } from 'bullmq'
 import { revalidatePath } from 'next/cache'
 import { getClinicId } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
-import { redis } from '../../../lib/redis'
+import { RedisUnavailableError } from '../../../lib/redis'
+import { getAutomationQueue } from '../../../lib/queue'
 import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
 
@@ -37,6 +37,35 @@ function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback
 }
 
+function getAutomationRuntimeStatus(): AutomationRuntimeStatus {
+    try {
+        getAutomationQueue()
+
+        return {
+            available: true,
+            mode: 'full',
+        }
+    } catch (error: unknown) {
+        if (error instanceof RedisUnavailableError) {
+            return {
+                available: false,
+                mode: 'read-only',
+                message: AUTOMATION_UNAVAILABLE_MESSAGE,
+            }
+        }
+
+        throw error
+    }
+}
+
+function assertAutomationAvailable() {
+    const runtime = getAutomationRuntimeStatus()
+
+    if (!runtime.available) {
+        throw new RedisUnavailableError(runtime.message)
+    }
+}
+
 export async function getAutomations(): Promise<Automation[]> {
     const clinicId = await getClinicId()
     return prisma.automation.findMany({
@@ -45,8 +74,14 @@ export async function getAutomations(): Promise<Automation[]> {
     }) as unknown as Automation[]
 }
 
+export async function getAutomationRuntime(): Promise<AutomationRuntimeStatus> {
+    return getAutomationRuntimeStatus()
+}
+
 export async function createAutomation(data: CreateAutomationInput): Promise<ActionResult<Automation>> {
     try {
+        assertAutomationAvailable()
+
         const clinicId = await getClinicId()
         const validatedData = createAutomationSchema.parse(data)
 
@@ -67,6 +102,8 @@ export async function createAutomation(data: CreateAutomationInput): Promise<Act
 
 export async function toggleAutomation(id: string, active: boolean): Promise<ActionResult<Automation>> {
     try {
+        assertAutomationAvailable()
+
         const clinicId = await getClinicId()
         const automation = await prisma.automation.update({
             where: { id, clinicId },
@@ -80,8 +117,9 @@ export async function toggleAutomation(id: string, active: boolean): Promise<Act
     }
 }
 
-export async function triggerEvent(event: string, payload: TriggerPayload) {
-    const clinicId = await getClinicId()
+export async function triggerEvent(event: string, payload: TriggerPayload): Promise<ActionResult<null>> {
+    try {
+        const clinicId = await getClinicId()
 
     const rules = await prisma.automation.findMany({
         where: { clinicId, triggerEvent: event, isActive: true }
@@ -107,6 +145,35 @@ export async function triggerEvent(event: string, payload: TriggerPayload) {
             removeOnFail: 200,
             backoff: { type: 'exponential', delay: 1000 },
         })
+
+        const automationQueue = getAutomationQueue()
+
+        for (const rule of rules) {
+            await automationQueue.add(rule.name, {
+                automationId: rule.id,
+                clinicId,
+                event,
+                payload,
+                config: rule.config,
+                actionType: rule.actionType,
+                triggerEvent: rule.triggerEvent,
+                delayMinutes: rule.delayMinutes
+            }, {
+                delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
+                attempts: 3,
+                removeOnComplete: 100,
+                removeOnFail: 200,
+                backoff: { type: 'exponential', delay: 1000 },
+            })
+        }
+
+        return { success: true, data: null }
+    } catch (error: unknown) {
+        const message = error instanceof RedisUnavailableError
+            ? AUTOMATION_UNAVAILABLE_MESSAGE
+            : getErrorMessage(error, AUTOMATION_UNAVAILABLE_MESSAGE)
+
+        return { success: false, error: message }
     }
 }
 
@@ -125,6 +192,8 @@ export async function getAutomationLogs(): Promise<AutomationLog[]> {
 
 export async function deleteAutomation(id: string): Promise<ActionResult<void>> {
     try {
+        assertAutomationAvailable()
+
         const clinicId = await getClinicId()
         await prisma.automation.delete({
             where: { id, clinicId }

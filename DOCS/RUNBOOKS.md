@@ -21,9 +21,9 @@ npm run db:seed
 ## 2. Motor de Automações (BullMQ)
 
 ### Fluxo de Trabalho do Worker
-As automações (Lembretes WhatsApp, IA) rodam em uma fila Redis.
-- **Desenvolvimento**: `npm run worker`
-- **Produção**: O worker deve rodar como um processo separado (PM2 ou Docker Sidecar).
+As automações (incluindo lembretes WhatsApp e fluxos de IA) rodam na fila Redis `automations` e são processadas por `workers/automation.worker.ts`. Hoje não existe um processo operacional separado chamado `workers/reminder.worker.ts`; lembretes são uma categoria de automação, não um worker distinto.
+- **Desenvolvimento**: `npm run worker` (atalho para `npm run worker:automation`)
+- **Produção/CI**: use `npm run worker:automation` para subir explicitamente o worker correto em um processo separado (PM2, Docker sidecar, job runner etc.).
 
 ### Falhas na Fila
 Se as mensagens pararem de chegar:

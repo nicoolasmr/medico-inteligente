@@ -2,6 +2,8 @@ import type { Session } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from './supabase/admin'
 import { createClient } from './supabase/server'
+import { getOptionalEnv, requireEnv } from './env'
+import { prisma } from './prisma'
 import type { User } from '../types'
 
 type UserMetadata = {

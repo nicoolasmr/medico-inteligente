@@ -15,6 +15,7 @@ const PROTECTED_PREFIXES = [
 ]
 
 const AUTH_PREFIXES = ['/login', '/register', '/forgot-password']
+const RATE_LIMIT_EXCLUDED_PREFIXES: string[] = []
 
 function getRequestIdentifier(request: NextRequest) {
     const forwardedFor = request.headers.get('x-forwarded-for')
@@ -23,11 +24,19 @@ function getRequestIdentifier(request: NextRequest) {
     return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
 }
 
+function isRateLimitedPath(pathname: string) {
+    const isApiRoute = pathname.startsWith('/api')
+    const isProtectedRoute = PROTECTED_PREFIXES.some(p => pathname.startsWith(p))
+    const isExcludedRoute = RATE_LIMIT_EXCLUDED_PREFIXES.some(p => pathname.startsWith(p))
+
+    return !isExcludedRoute && (isApiRoute || isProtectedRoute)
+}
+
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
     let response = NextResponse.next({ request })
 
-    if (pathname.startsWith('/api') || PROTECTED_PREFIXES.some(p => pathname.startsWith(p))) {
+    if (isRateLimitedPath(pathname)) {
         try {
             const identifier = getRequestIdentifier(request)
             const { success } = await apiRatelimit.limit(identifier)
