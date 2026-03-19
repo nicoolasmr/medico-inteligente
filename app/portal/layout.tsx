@@ -10,12 +10,12 @@ type PortalLayoutProps = {
 
 export default async function PortalLayout({ children }: PortalLayoutProps) {
     const { clinicId, patientId } = await getPortalIdentity()
-    const patient = await prisma.patient.findFirst({
-        where: { clinicId, id: patientId },
-        select: { name: true, email: true },
+    const patient = await prisma.patient.findUnique({
+        where: { id: patientId },
+        select: { clinicId: true, name: true, email: true },
     })
 
-    if (!patient) {
+    if (!patient || patient.clinicId != clinicId) {
         throw new Error('Portal patient not found for current identity')
     }
 
