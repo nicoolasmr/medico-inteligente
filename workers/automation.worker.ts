@@ -1,4 +1,5 @@
 import { Job, Worker } from 'bullmq'
+import { buildAutomationRedisProcessedKey, type AutomationPayload } from '../lib/automation'
 import { prisma } from '../lib/prisma'
 import { getRedis } from '../lib/redis'
 import { sendWhatsApp } from '../lib/whatsapp'
@@ -6,19 +7,25 @@ import { sendWhatsApp } from '../lib/whatsapp'
 type WorkerPayload = {
     automationId: string
     clinicId: string
+    event: string
     triggerEvent: string
     actionType: string
-    payload?: {
-        patient?: {
-            id?: string
-            name?: string
-            phone?: string | null
-        }
-        time?: string
-        [key: string]: unknown
-    }
+    idempotencyKey: string
+    payload?: AutomationPayload
     config?: Record<string, unknown>
 }
+
+type AutomationLogStatus = 'success' | 'failed' | 'skipped'
+
+type LogContext = {
+    jobId: string
+    attempt: number
+    idempotencyKey: string
+    event: string
+    patientId?: string
+}
+
+const PROCESSED_TTL_SECONDS = 60 * 60 * 24 * 30
 
 function interpolateTemplate(template: string, payload: WorkerPayload['payload']) {
     return template
@@ -26,8 +33,27 @@ function interpolateTemplate(template: string, payload: WorkerPayload['payload']
         .replace('{time}', payload?.time || '')
 }
 
-export async function persistAutomationLog(job: Job<WorkerPayload>, data: { status: 'success' | 'failed'; response: Record<string, unknown> }) {
+function getLogContext(job: Job<WorkerPayload>): LogContext {
+    return {
+        jobId: String(job.id),
+        attempt: job.attemptsMade + 1,
+        idempotencyKey: job.data.idempotencyKey,
+        event: job.data.event,
+        patientId: job.data.payload?.patient?.id,
+    }
+}
+
+function logAutomationEvent(level: 'info' | 'warn' | 'error', message: string, context: LogContext, extra?: Record<string, unknown>) {
+    console[level]('[AutomationWorker]', {
+        message,
+        ...context,
+        ...extra,
+    })
+}
+
+async function persistLog(job: Job<WorkerPayload>, data: { status: AutomationLogStatus; response: Record<string, unknown> }) {
     const { automationId, clinicId, actionType, triggerEvent, payload } = job.data
+    const context = getLogContext(job)
 
     await prisma.automationLog.create({
         data: {
@@ -38,19 +64,59 @@ export async function persistAutomationLog(job: Job<WorkerPayload>, data: { stat
             triggerEvent,
             status: data.status,
             response: {
-                jobId: job.id,
                 queue: job.queueName,
-                attemptsMade: job.attemptsMade,
+                ...context,
                 ...data.response,
             },
         },
     })
 }
 
-export async function processAutomationJob(job: Job<WorkerPayload>) {
-    const { automationId, clinicId, payload, config, actionType } = job.data
+async function hasProcessedAutomation(idempotencyKey: string) {
+    const processedKey = buildAutomationRedisProcessedKey(idempotencyKey)
+    const processed = await redis.get(processedKey)
+    return Boolean(processed)
+}
 
-    console.log(`[Worker] Executing automation ${automationId} for clinic ${clinicId}`)
+async function markAutomationProcessed(idempotencyKey: string) {
+    const processedKey = buildAutomationRedisProcessedKey(idempotencyKey)
+    await redis.set(processedKey, '1', 'EX', PROCESSED_TTL_SECONDS)
+}
+
+async function finalizeSuccess(job: Job<WorkerPayload>, formattedMessage?: string) {
+    const { automationId, actionType, payload } = job.data
+
+    await prisma.$transaction([
+        prisma.automation.update({
+            where: { id: automationId },
+            data: { executions: { increment: 1 } },
+        }),
+        prisma.automationLog.create({
+            data: {
+                clinicId: job.data.clinicId,
+                automationId,
+                patientId: payload?.patient?.id,
+                actionType,
+                triggerEvent: job.data.triggerEvent,
+                status: 'success',
+                response: {
+                    queue: job.queueName,
+                    ...getLogContext(job),
+                    action: actionType,
+                    destination: payload?.patient?.phone,
+                    patientName: payload?.patient?.name ?? 'Paciente',
+                    messagePreview: formattedMessage,
+                },
+            },
+        }),
+    ])
+}
+
+export async function processAutomationJob(job: Job<WorkerPayload>) {
+    const { automationId, clinicId, payload, config, actionType, idempotencyKey } = job.data
+    const context = getLogContext(job)
+
+    logAutomationEvent('info', 'Executing automation job', context, { automationId, clinicId, actionType })
 
     try {
         if (actionType === 'whatsapp') {
@@ -63,21 +129,28 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
                 throw new Error('Automation payload is missing patient phone')
             }
 
+            const alreadyProcessed = await hasProcessedAutomation(idempotencyKey)
+            if (alreadyProcessed) {
+                logAutomationEvent('warn', 'Skipping duplicate automation delivery', context, { automationId })
+                await persistLog(job, {
+                    status: 'skipped',
+                    response: {
+                        action: actionType,
+                        reason: 'duplicate-idempotency-key',
+                        duplicate: true,
+                    },
+                })
+                return
+            }
+
             const formattedMessage = interpolateTemplate(message, payload)
             await sendWhatsApp({ to: payload.patient.phone, message: formattedMessage })
+            await markAutomationProcessed(idempotencyKey)
+            await finalizeSuccess(job, formattedMessage)
 
-            await prisma.automation.update({
-                where: { id: automationId },
-                data: { executions: { increment: 1 } },
-            })
-
-            await persistAutomationLog(job, {
-                status: 'success',
-                response: {
-                    action: actionType,
-                    destination: payload.patient.phone,
-                    patientName: payload.patient.name ?? 'Paciente',
-                },
+            logAutomationEvent('info', 'Automation delivery completed', context, {
+                automationId,
+                destination: payload.patient.phone,
             })
             return
         }
@@ -91,13 +164,21 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
         })
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Erro desconhecido na automação'
-        console.error(`[Worker] Error in job ${job.id}:`, error)
+
+        logAutomationEvent('error', 'Automation job failed', context, {
+            automationId,
+            clinicId,
+            actionType,
+            error: message,
+            alertType: 'automation_execution_failed',
+        })
 
         await persistAutomationLog(job, {
             status: 'failed',
             response: {
                 action: actionType,
                 error: message,
+                alertType: 'automation_execution_failed',
             },
         })
 
@@ -108,11 +189,19 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
 export const worker = new Worker<WorkerPayload>('automations', processAutomationJob, { connection: redis })
 
 worker.on('completed', job => {
-    console.log(`[Worker] Job ${job.id} completed`)
+    logAutomationEvent('info', 'Job completed', getLogContext(job), {})
 })
 
 worker.on('failed', (job, err) => {
-    console.error(`[Worker] Job ${job?.id} failed:`, err)
+    if (!job) {
+        console.error('[AutomationWorker]', { message: 'Job failed before it was hydrated', error: err.message })
+        return
+    }
+
+    logAutomationEvent('error', 'Job failed event emitted', getLogContext(job), {
+        error: err.message,
+        alertType: 'automation_job_failed_event',
+    })
 })
 
 console.log('--- [Automations Worker] Started and waiting for jobs ---')
