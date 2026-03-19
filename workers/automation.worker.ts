@@ -3,6 +3,7 @@ import { buildAutomationRedisProcessedKey, type AutomationPayload } from '../lib
 import { prisma } from '../lib/prisma'
 import { getRedis, RedisUnavailableError } from '../lib/redis'
 import { sendWhatsApp } from '../lib/whatsapp'
+import { pathToFileURL } from 'node:url'
 
 type WorkerPayload = {
     automationId: string
@@ -11,6 +12,7 @@ type WorkerPayload = {
     triggerEvent: string
     actionType: string
     idempotencyKey: string
+    delayMinutes?: number
     payload?: AutomationPayload
     config?: Record<string, unknown>
 }
@@ -18,14 +20,20 @@ type WorkerPayload = {
 type AutomationLogStatus = 'success' | 'failed' | 'skipped'
 
 type LogContext = {
+    queue: string
     jobId: string
     attempt: number
     idempotencyKey: string
     event: string
     patientId?: string
+    automationId: string
+    clinicId: string
+    actionType: string
+    delayMinutes: number
 }
 
 const PROCESSED_TTL_SECONDS = 60 * 60 * 24 * 30
+const redis = getRedis()
 
 let redisClient: ReturnType<typeof getRedis> | null = null
 
@@ -44,15 +52,25 @@ function interpolateTemplate(template: string, payload: WorkerPayload['payload']
 
 function getLogContext(job: Job<WorkerPayload>): LogContext {
     return {
+        queue: job.queueName,
         jobId: String(job.id),
         attempt: job.attemptsMade + 1,
         idempotencyKey: job.data.idempotencyKey,
         event: job.data.event,
         patientId: job.data.payload?.patient?.id,
+        automationId: job.data.automationId,
+        clinicId: job.data.clinicId,
+        actionType: job.data.actionType,
+        delayMinutes: job.data.delayMinutes ?? 0,
     }
 }
 
-function logAutomationEvent(level: 'info' | 'warn' | 'error', message: string, context: LogContext, extra?: Record<string, unknown>) {
+function logAutomationEvent(
+    level: 'info' | 'warn' | 'error',
+    message: string,
+    context: LogContext,
+    extra?: Record<string, unknown>,
+) {
     console[level]('[AutomationWorker]', {
         message,
         ...context,
@@ -60,9 +78,11 @@ function logAutomationEvent(level: 'info' | 'warn' | 'error', message: string, c
     })
 }
 
-async function persistLog(job: Job<WorkerPayload>, data: { status: AutomationLogStatus; response: Record<string, unknown> }) {
+async function persistAutomationLog(
+    job: Job<WorkerPayload>,
+    data: { status: AutomationLogStatus; response: Record<string, unknown> },
+) {
     const { automationId, clinicId, actionType, triggerEvent, payload } = job.data
-    const context = getLogContext(job)
 
     await prisma.automationLog.create({
         data: {
@@ -73,12 +93,19 @@ async function persistLog(job: Job<WorkerPayload>, data: { status: AutomationLog
             triggerEvent,
             status: data.status,
             response: {
-                queue: job.queueName,
-                ...context,
+                ...getLogContext(job),
                 ...data.response,
             },
         },
     })
+}
+
+function getRedisConnection() {
+    if ('getRedis' in redisModule && typeof redisModule.getRedis === 'function') {
+        return redisModule.getRedis()
+    }
+
+    return (redisModule as { redis: { get: (key: string) => Promise<unknown>; set: (...args: unknown[]) => Promise<unknown> } }).redis
 }
 
 async function hasProcessedAutomation(idempotencyKey: string) {
@@ -109,7 +136,6 @@ async function finalizeSuccess(job: Job<WorkerPayload>, formattedMessage?: strin
                 triggerEvent: job.data.triggerEvent,
                 status: 'success',
                 response: {
-                    queue: job.queueName,
                     ...getLogContext(job),
                     action: actionType,
                     destination: payload?.patient?.phone,
@@ -125,7 +151,7 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
     const { automationId, clinicId, payload, config, actionType, idempotencyKey } = job.data
     const context = getLogContext(job)
 
-    logAutomationEvent('info', 'Executing automation job', context, { automationId, clinicId, actionType })
+    logAutomationEvent('info', 'Executing automation job', context)
 
     try {
         if (actionType === 'whatsapp') {
@@ -140,8 +166,8 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
 
             const alreadyProcessed = await hasProcessedAutomation(idempotencyKey)
             if (alreadyProcessed) {
-                logAutomationEvent('warn', 'Skipping duplicate automation delivery', context, { automationId })
-                await persistLog(job, {
+                logAutomationEvent('warn', 'Skipping duplicate automation delivery', context, { reason: 'duplicate-idempotency-key' })
+                await persistAutomationLog(job, {
                     status: 'skipped',
                     response: {
                         action: actionType,
@@ -153,13 +179,14 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
             }
 
             const formattedMessage = interpolateTemplate(message, payload)
-            await sendWhatsApp({ to: payload.patient.phone, message: formattedMessage })
+            const delivery = await sendWhatsApp({ to: payload.patient.phone, message: formattedMessage })
+
             await markAutomationProcessed(idempotencyKey)
             await finalizeSuccess(job, formattedMessage)
 
             logAutomationEvent('info', 'Automation delivery completed', context, {
-                automationId,
                 destination: payload.patient.phone,
+                providerMessageId: delivery?.messageId,
             })
             return
         }
@@ -175,9 +202,6 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
         const message = error instanceof Error ? error.message : 'Erro desconhecido na automação'
 
         logAutomationEvent('error', 'Automation job failed', context, {
-            automationId,
-            clinicId,
-            actionType,
             error: message,
             alertType: 'automation_execution_failed',
         })

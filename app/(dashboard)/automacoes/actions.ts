@@ -2,11 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { getClinicId } from '../../../lib/auth'
-import { prisma } from '../../../lib/prisma'
-import { RedisUnavailableError } from '../../../lib/redis'
-import { getAutomationQueue } from '../../../lib/queue'
-import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import { buildAutomationIdempotencyKey, buildAutomationJobName, type AutomationPayload } from '../../../lib/automation'
+import { prisma } from '../../../lib/prisma'
+import { getAutomationQueue } from '../../../lib/queue'
+import { RedisUnavailableError, isRedisConfigured } from '../../../lib/redis'
+import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
 
 const AUTOMATION_UNAVAILABLE_MESSAGE = 'Automações indisponíveis no momento. Configure o Redis para habilitar filas e workers.'
@@ -17,30 +17,29 @@ export type AutomationRuntimeStatus = {
     message?: string
 }
 
-type TriggerPayload = AutomationPayload
+const AUTOMATION_UNAVAILABLE_MESSAGE = 'Automações estão em modo somente leitura no momento. Configure o REDIS_URL para reativar execuções e agendamentos.'
 
 function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback
 }
 
+function isRedisUnavailableError(error: unknown) {
+    return error instanceof RedisUnavailableError
+        || (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'REDIS_UNAVAILABLE')
+}
+
 function getAutomationRuntimeStatus(): AutomationRuntimeStatus {
-    try {
-        getAutomationQueue()
-
+    if (!isRedisConfigured()) {
         return {
-            available: true,
-            mode: 'full',
+            available: false,
+            mode: 'read-only',
+            message: AUTOMATION_UNAVAILABLE_MESSAGE,
         }
-    } catch (error: unknown) {
-        if (error instanceof RedisUnavailableError) {
-            return {
-                available: false,
-                mode: 'read-only',
-                message: AUTOMATION_UNAVAILABLE_MESSAGE,
-            }
-        }
+    }
 
-        throw error
+    return {
+        available: true,
+        mode: 'full',
     }
 }
 
@@ -136,7 +135,7 @@ export async function triggerEvent(event: string, payload: TriggerPayload): Prom
 
         return { success: true, data: null }
     } catch (error: unknown) {
-        const message = error instanceof RedisUnavailableError
+        const message = isRedisUnavailableError(error)
             ? AUTOMATION_UNAVAILABLE_MESSAGE
             : getErrorMessage(error, AUTOMATION_UNAVAILABLE_MESSAGE)
 
