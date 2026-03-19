@@ -6,6 +6,7 @@ const automationUpdate = vi.fn()
 const transactionMock = vi.fn(async (operations: unknown[]) => operations)
 const getClinicId = vi.fn()
 const queueAdd = vi.fn()
+const getAutomationQueue = vi.fn()
 const redisGet = vi.fn()
 const redisSet = vi.fn()
 const sendWhatsApp = vi.fn()
@@ -36,11 +37,16 @@ vi.mock('../lib/auth', () => ({
     getClinicId,
 }))
 
+vi.mock('../lib/queue', () => ({
+    getAutomationQueue,
+}))
+
 vi.mock('../lib/redis', () => ({
-    redis: {
+    getRedis: vi.fn(() => ({
         get: redisGet,
         set: redisSet,
-    },
+    })),
+    RedisUnavailableError: class RedisUnavailableError extends Error {},
 }))
 
 vi.mock('../lib/whatsapp', () => ({
@@ -56,6 +62,7 @@ describe('automation pipeline hardening', () => {
         vi.clearAllMocks()
         getClinicId.mockResolvedValue('clinic-1')
         transactionMock.mockImplementation(async (operations: unknown[]) => operations)
+        getAutomationQueue.mockReturnValue({ add: queueAdd })
         redisGet.mockResolvedValue(null)
         redisSet.mockResolvedValue('OK')
         sendWhatsApp.mockResolvedValue(undefined)

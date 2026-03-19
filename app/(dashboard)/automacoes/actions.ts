@@ -9,19 +9,12 @@ import { createAutomationSchema, type CreateAutomationInput } from '../../../lib
 import { buildAutomationIdempotencyKey, buildAutomationJobName, type AutomationPayload } from '../../../lib/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
 
-let automationQueue: Queue | null | undefined
+const AUTOMATION_UNAVAILABLE_MESSAGE = 'Automações indisponíveis no momento. Configure o Redis para habilitar filas e workers.'
 
-function getAutomationQueue() {
-    if (automationQueue !== undefined) return automationQueue
-
-    try {
-        automationQueue = new Queue('automations', { connection: redis })
-    } catch (error) {
-        console.error('[automacoes] Queue unavailable; automation triggers will be skipped.', error)
-        automationQueue = null
-    }
-
-    return automationQueue
+export type AutomationRuntimeStatus = {
+    available: boolean
+    mode: 'full' | 'read-only'
+    message?: string
 }
 
 type TriggerPayload = AutomationPayload
@@ -63,7 +56,7 @@ export async function getAutomations(): Promise<Automation[]> {
     const clinicId = await getClinicId()
     return prisma.automation.findMany({
         where: { clinicId },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
     }) as unknown as Automation[]
 }
 
@@ -82,8 +75,8 @@ export async function createAutomation(data: CreateAutomationInput): Promise<Act
             data: {
                 ...validatedData,
                 clinicId,
-                isActive: true
-            }
+                isActive: true,
+            },
         })
 
         revalidatePath('/automacoes')
@@ -100,7 +93,7 @@ export async function toggleAutomation(id: string, active: boolean): Promise<Act
         const clinicId = await getClinicId()
         const automation = await prisma.automation.update({
             where: { id, clinicId },
-            data: { isActive: active }
+            data: { isActive: active },
         })
 
         revalidatePath('/automacoes')
@@ -113,43 +106,16 @@ export async function toggleAutomation(id: string, active: boolean): Promise<Act
 export async function triggerEvent(event: string, payload: TriggerPayload): Promise<ActionResult<null>> {
     try {
         const clinicId = await getClinicId()
-
-    const rules = await prisma.automation.findMany({
-        where: { clinicId, triggerEvent: event, isActive: true }
-    })
-
-    const queue = getAutomationQueue()
-    if (!queue) return
-
-    for (const rule of rules) {
-        const jobData = {
-            automationId: rule.id,
-            clinicId,
-            event,
-            payload,
-            config: rule.config,
-            actionType: rule.actionType,
-            triggerEvent: rule.triggerEvent,
-            delayMinutes: rule.delayMinutes
-        }
-        const idempotencyKey = buildAutomationIdempotencyKey({ automationId: rule.id, clinicId, event, payload })
-
-        await automationQueue.add(buildAutomationJobName({ automationId: rule.id, clinicId, event, payload }), {
-            ...jobData,
-            idempotencyKey,
-        }, {
-            jobId: idempotencyKey,
-            delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
-            attempts: 3,
-            removeOnComplete: 100,
-            removeOnFail: 200,
-            backoff: { type: 'exponential', delay: 1000 },
+        const rules = await prisma.automation.findMany({
+            where: { clinicId, triggerEvent: event, isActive: true },
         })
 
-        const automationQueue = getAutomationQueue()
+        const queue = getAutomationQueue()
 
         for (const rule of rules) {
-            await automationQueue.add(rule.name, {
+            const idempotencyKey = buildAutomationIdempotencyKey({ automationId: rule.id, clinicId, event, payload })
+
+            await queue.add(buildAutomationJobName({ automationId: rule.id, clinicId, event, payload }), {
                 automationId: rule.id,
                 clinicId,
                 event,
@@ -157,8 +123,9 @@ export async function triggerEvent(event: string, payload: TriggerPayload): Prom
                 config: rule.config,
                 actionType: rule.actionType,
                 triggerEvent: rule.triggerEvent,
-                delayMinutes: rule.delayMinutes
+                idempotencyKey,
             }, {
+                jobId: idempotencyKey,
                 delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
                 attempts: 3,
                 removeOnComplete: 100,
@@ -186,7 +153,7 @@ export async function getAutomationLogs(): Promise<AutomationLog[]> {
             patient: { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
-        take: 50
+        take: 50,
     }) as unknown as AutomationLog[]
 }
 
@@ -196,7 +163,7 @@ export async function deleteAutomation(id: string): Promise<ActionResult<void>> 
 
         const clinicId = await getClinicId()
         await prisma.automation.delete({
-            where: { id, clinicId }
+            where: { id, clinicId },
         })
 
         revalidatePath('/automacoes')

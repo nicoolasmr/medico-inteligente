@@ -127,6 +127,10 @@ export async function registerClinic(data: RegisterClinicInput): Promise<Registe
 
         if (userError) throw new Error(userError.message)
 
+        if (!createdClinicId) {
+            throw new Error('Falha ao criar clínica')
+        }
+
         const { error: automationError } = await supabaseAdmin
             .from('automations')
             .insert(getDefaultAutomations(createdClinicId))

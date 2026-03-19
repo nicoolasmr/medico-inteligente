@@ -1,7 +1,7 @@
 import { Job, Worker } from 'bullmq'
 import { buildAutomationRedisProcessedKey, type AutomationPayload } from '../lib/automation'
 import { prisma } from '../lib/prisma'
-import { getRedis } from '../lib/redis'
+import { getRedis, RedisUnavailableError } from '../lib/redis'
 import { sendWhatsApp } from '../lib/whatsapp'
 
 type WorkerPayload = {
@@ -26,6 +26,15 @@ type LogContext = {
 }
 
 const PROCESSED_TTL_SECONDS = 60 * 60 * 24 * 30
+
+let redisClient: ReturnType<typeof getRedis> | null = null
+
+function getWorkerRedis() {
+    if (redisClient) return redisClient
+
+    redisClient = getRedis()
+    return redisClient
+}
 
 function interpolateTemplate(template: string, payload: WorkerPayload['payload']) {
     return template
@@ -74,13 +83,13 @@ async function persistLog(job: Job<WorkerPayload>, data: { status: AutomationLog
 
 async function hasProcessedAutomation(idempotencyKey: string) {
     const processedKey = buildAutomationRedisProcessedKey(idempotencyKey)
-    const processed = await redis.get(processedKey)
+    const processed = await getWorkerRedis().get(processedKey)
     return Boolean(processed)
 }
 
 async function markAutomationProcessed(idempotencyKey: string) {
     const processedKey = buildAutomationRedisProcessedKey(idempotencyKey)
-    await redis.set(processedKey, '1', 'EX', PROCESSED_TTL_SECONDS)
+    await getWorkerRedis().set(processedKey, '1', 'EX', PROCESSED_TTL_SECONDS)
 }
 
 async function finalizeSuccess(job: Job<WorkerPayload>, formattedMessage?: string) {
@@ -155,7 +164,7 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
             return
         }
 
-        await persistAutomationLog(job, {
+        await persistLog(job, {
             status: 'success',
             response: {
                 action: actionType,
@@ -173,7 +182,7 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
             alertType: 'automation_execution_failed',
         })
 
-        await persistAutomationLog(job, {
+        await persistLog(job, {
             status: 'failed',
             response: {
                 action: actionType,
@@ -186,22 +195,38 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
     }
 }
 
-export const worker = new Worker<WorkerPayload>('automations', processAutomationJob, { connection: redis })
+export function createAutomationWorker() {
+    return new Worker<WorkerPayload>('automations', processAutomationJob, { connection: getWorkerRedis() })
+}
 
-worker.on('completed', job => {
-    logAutomationEvent('info', 'Job completed', getLogContext(job), {})
-})
+export const worker = (() => {
+    try {
+        const automationWorker = createAutomationWorker()
 
-worker.on('failed', (job, err) => {
-    if (!job) {
-        console.error('[AutomationWorker]', { message: 'Job failed before it was hydrated', error: err.message })
-        return
+        automationWorker.on('completed', job => {
+            logAutomationEvent('info', 'Job completed', getLogContext(job), {})
+        })
+
+        automationWorker.on('failed', (job, err) => {
+            if (!job) {
+                console.error('[AutomationWorker]', { message: 'Job failed before it was hydrated', error: err.message })
+                return
+            }
+
+            logAutomationEvent('error', 'Job failed event emitted', getLogContext(job), {
+                error: err.message,
+                alertType: 'automation_job_failed_event',
+            })
+        })
+
+        console.log('--- [Automations Worker] Started and waiting for jobs ---')
+        return automationWorker
+    } catch (error) {
+        if (error instanceof RedisUnavailableError) {
+            console.warn('--- [Automations Worker] Redis unavailable; worker not started ---')
+            return null
+        }
+
+        throw error
     }
-
-    logAutomationEvent('error', 'Job failed event emitted', getLogContext(job), {
-        error: err.message,
-        alertType: 'automation_job_failed_event',
-    })
-})
-
-console.log('--- [Automations Worker] Started and waiting for jobs ---')
+})()

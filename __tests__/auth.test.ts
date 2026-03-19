@@ -124,6 +124,38 @@ describe('Auth Logic (Tenant Isolation)', () => {
         }), { onConflict: 'id' })
     })
 
+    it('should default repair payload name and role when metadata is incomplete', async () => {
+        const session = {
+            user: {
+                id: 'user-456',
+                email: 'fallback@example.com',
+                user_metadata: { clinic_id: 'clinic-456' },
+            },
+        }
+
+        const repairQuery = {
+            upsert: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: 'user-456', clinicId: 'clinic-456', role: 'owner' }, error: null }),
+        }
+
+        ; (createClient as any).mockResolvedValue({
+            from: vi.fn().mockReturnValue({
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                single: vi.fn().mockResolvedValue({ data: null, error: { message: 'missing profile' } }),
+            }),
+        })
+        ; (createAdminClient as any).mockReturnValue({ from: vi.fn(() => repairQuery) })
+
+        await ensureUserProfile(session as any)
+
+        expect(repairQuery.upsert).toHaveBeenCalledWith(expect.objectContaining({
+            name: 'fallback@example.com',
+            role: 'owner',
+        }), { onConflict: 'id' })
+    })
+
     it('should return null from ensureUserProfile when repair fails', async () => {
         const session = {
             user: {
