@@ -34,6 +34,12 @@ export default async function PatientPortalPage() {
         take: 4,
     })
 
+    if (!patient) {
+        return (
+            <div className="card p-6 text-sm text-text-secondary">Paciente não encontrado para este acesso.</div>
+        )
+    }
+
     const nextAppointment = appointments[0] ?? null
 
     return (

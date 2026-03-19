@@ -217,3 +217,7 @@ export async function requireRole(
     }
     return user
 }
+
+export async function establishPatientPortalSession(_token: string): Promise<boolean> {
+    return false
+}

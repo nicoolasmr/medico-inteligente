@@ -9,7 +9,7 @@ import { RedisUnavailableError, isRedisConfigured } from '../../../lib/redis'
 import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
 
-export const AUTOMATION_UNAVAILABLE_MESSAGE = 'Automações estão em modo somente leitura no momento. Configure o REDIS_URL para reativar execuções e agendamentos.'
+const AUTOMATION_UNAVAILABLE_MESSAGE = 'Automações indisponíveis no momento. Configure o Redis para habilitar filas e workers.'
 
 export type AutomationRuntimeStatus = {
     available: boolean
@@ -109,18 +109,12 @@ export async function triggerEvent(event: string, payload: TriggerPayload): Prom
             where: { clinicId, triggerEvent: event, isActive: true },
         })
 
-        const queue = getAutomationQueue({ required: false })
-        if (!queue) {
-            console.warn('[automacoes] Queue unavailable; automation trigger skipped.', {
-                clinicId,
-                event,
-                rules: rules.length,
-            })
-            return { success: true, data: null }
-        }
+        const queue = getAutomationQueue()
 
         for (const rule of rules) {
-            const jobData = {
+            const idempotencyKey = buildAutomationIdempotencyKey({ automationId: rule.id, clinicId, event, payload })
+
+            await queue.add(buildAutomationJobName({ automationId: rule.id, clinicId, event, payload }), {
                 automationId: rule.id,
                 clinicId,
                 event,
@@ -128,25 +122,15 @@ export async function triggerEvent(event: string, payload: TriggerPayload): Prom
                 config: rule.config,
                 actionType: rule.actionType,
                 triggerEvent: rule.triggerEvent,
-                delayMinutes: rule.delayMinutes,
-            }
-            const idempotencyKey = buildAutomationIdempotencyKey({ automationId: rule.id, clinicId, event, payload })
-
-            await queue.add(
-                buildAutomationJobName({ automationId: rule.id, clinicId, event, payload }),
-                {
-                    ...jobData,
-                    idempotencyKey,
-                },
-                {
-                    jobId: idempotencyKey,
-                    delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
-                    attempts: 3,
-                    removeOnComplete: 100,
-                    removeOnFail: 200,
-                    backoff: { type: 'exponential', delay: 1000 },
-                },
-            )
+                idempotencyKey,
+            }, {
+                jobId: idempotencyKey,
+                delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
+                attempts: 3,
+                removeOnComplete: 100,
+                removeOnFail: 200,
+                backoff: { type: 'exponential', delay: 1000 },
+            })
         }
 
         return { success: true, data: null }

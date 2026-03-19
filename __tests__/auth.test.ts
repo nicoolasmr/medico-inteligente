@@ -123,10 +123,46 @@ describe('auth helpers', () => {
         expect(user).toEqual(repairedUser)
     })
 
-    it('getCurrentUser should redirect when repair is impossible', async () => {
-        const session = { user: { id: 'user-111', email: 'doctor@example.com', user_metadata: {} } }
-        getSession.mockResolvedValue({ data: { session }, error: null })
-        const { getCurrentUser } = await import('../lib/auth')
+    it('should default repair payload name and role when metadata is incomplete', async () => {
+        const session = {
+            user: {
+                id: 'user-456',
+                email: 'fallback@example.com',
+                user_metadata: { clinic_id: 'clinic-456' },
+            },
+        }
+
+        const repairQuery = {
+            upsert: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: 'user-456', clinicId: 'clinic-456', role: 'owner' }, error: null }),
+        }
+
+        ; (createClient as any).mockResolvedValue({
+            from: vi.fn().mockReturnValue({
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                single: vi.fn().mockResolvedValue({ data: null, error: { message: 'missing profile' } }),
+            }),
+        })
+        ; (createAdminClient as any).mockReturnValue({ from: vi.fn(() => repairQuery) })
+
+        await ensureUserProfile(session as any)
+
+        expect(repairQuery.upsert).toHaveBeenCalledWith(expect.objectContaining({
+            name: 'fallback@example.com',
+            role: 'owner',
+        }), { onConflict: 'id' })
+    })
+
+    it('should return null from ensureUserProfile when repair fails', async () => {
+        const session = {
+            user: {
+                id: 'user-123',
+                email: 'owner@example.com',
+                user_metadata: { clinic_id: 'clinic-456', name: 'Owner' },
+            },
+        }
 
         await expect(getCurrentUser()).rejects.toThrow('NEXT_REDIRECT')
         expect(redirect).toHaveBeenCalledWith('/login?error=profile_not_found')
