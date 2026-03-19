@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { apiRatelimit } from './lib/ratelimit'
 
 const PROTECTED_PREFIXES = [
+    '/portal',
     '/dashboard',
     '/patients',
     '/agenda',
@@ -41,7 +42,7 @@ export async function middleware(request: NextRequest) {
             const { success } = await apiRatelimit.limit(identifier)
 
             if (!success) {
-                return new NextResponse('Too Many Requests', { status: 429 })
+                return new Response('Too Many Requests', { status: 429 })
             }
         } catch (error) {
             console.error('[middleware] Rate limit check failed; continuing request.', error)
@@ -86,5 +87,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp)).*)'],
+    matcher: ['/api/:path*', '/((?!_next/static|_next/image|favicon.ico|.*\.(?:png|jpg|jpeg|gif|svg|ico|webp)).*)'],
 }

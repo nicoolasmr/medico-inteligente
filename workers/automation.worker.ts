@@ -26,7 +26,7 @@ function interpolateTemplate(template: string, payload: WorkerPayload['payload']
         .replace('{time}', payload?.time || '')
 }
 
-async function persistLog(job: Job<WorkerPayload>, data: { status: 'success' | 'failed'; response: Record<string, unknown> }) {
+export async function persistAutomationLog(job: Job<WorkerPayload>, data: { status: 'success' | 'failed'; response: Record<string, unknown> }) {
     const { automationId, clinicId, actionType, triggerEvent, payload } = job.data
 
     await prisma.automationLog.create({
@@ -47,7 +47,7 @@ async function persistLog(job: Job<WorkerPayload>, data: { status: 'success' | '
     })
 }
 
-const worker = new Worker<WorkerPayload>('automations', async job => {
+export async function processAutomationJob(job: Job<WorkerPayload>) {
     const { automationId, clinicId, payload, config, actionType } = job.data
 
     console.log(`[Worker] Executing automation ${automationId} for clinic ${clinicId}`)
@@ -71,7 +71,7 @@ const worker = new Worker<WorkerPayload>('automations', async job => {
                 data: { executions: { increment: 1 } },
             })
 
-            await persistLog(job, {
+            await persistAutomationLog(job, {
                 status: 'success',
                 response: {
                     action: actionType,
@@ -82,7 +82,7 @@ const worker = new Worker<WorkerPayload>('automations', async job => {
             return
         }
 
-        await persistLog(job, {
+        await persistAutomationLog(job, {
             status: 'success',
             response: {
                 action: actionType,
@@ -93,7 +93,7 @@ const worker = new Worker<WorkerPayload>('automations', async job => {
         const message = error instanceof Error ? error.message : 'Erro desconhecido na automação'
         console.error(`[Worker] Error in job ${job.id}:`, error)
 
-        await persistLog(job, {
+        await persistAutomationLog(job, {
             status: 'failed',
             response: {
                 action: actionType,
@@ -103,7 +103,9 @@ const worker = new Worker<WorkerPayload>('automations', async job => {
 
         throw error
     }
-}, { connection: getRedis() })
+}
+
+export const worker = new Worker<WorkerPayload>('automations', processAutomationJob, { connection: redis })
 
 worker.on('completed', job => {
     console.log(`[Worker] Job ${job.id} completed`)

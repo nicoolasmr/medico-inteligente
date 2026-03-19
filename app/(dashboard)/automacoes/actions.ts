@@ -8,13 +8,19 @@ import { getAutomationQueue } from '../../../lib/queue'
 import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
 
-const AUTOMATION_UNAVAILABLE_MESSAGE =
-    'Automações estão em modo somente leitura no momento. Configure o REDIS_URL para reativar execuções e agendamentos.'
+let automationQueue: Queue | null | undefined
 
-export type AutomationRuntimeStatus = {
-    available: boolean
-    mode: 'full' | 'read-only'
-    message?: string
+function getAutomationQueue() {
+    if (automationQueue !== undefined) return automationQueue
+
+    try {
+        automationQueue = new Queue('automations', { connection: redis })
+    } catch (error) {
+        console.error('[automacoes] Queue unavailable; automation triggers will be skipped.', error)
+        automationQueue = null
+    }
+
+    return automationQueue
 }
 
 type TriggerPayload = {
@@ -115,8 +121,29 @@ export async function triggerEvent(event: string, payload: TriggerPayload): Prom
     try {
         const clinicId = await getClinicId()
 
-        const rules = await prisma.automation.findMany({
-            where: { clinicId, triggerEvent: event, isActive: true }
+    const rules = await prisma.automation.findMany({
+        where: { clinicId, triggerEvent: event, isActive: true }
+    })
+
+    const queue = getAutomationQueue()
+    if (!queue) return
+
+    for (const rule of rules) {
+        await queue.add(rule.name, {
+            automationId: rule.id,
+            clinicId,
+            event,
+            payload,
+            config: rule.config,
+            actionType: rule.actionType,
+            triggerEvent: rule.triggerEvent,
+            delayMinutes: rule.delayMinutes
+        }, {
+            delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
+            attempts: 3,
+            removeOnComplete: 100,
+            removeOnFail: 200,
+            backoff: { type: 'exponential', delay: 1000 },
         })
 
         const automationQueue = getAutomationQueue()

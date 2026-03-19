@@ -1,31 +1,38 @@
 import { Calendar, ChevronRight, Clock, FileText, MessageCircle, Plus, ShieldCheck } from 'lucide-react'
-import { getAuthenticatedPortalPatient } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
 import { formatDate, formatDateTime, formatTime } from '../../lib/utils'
+import { getPortalIdentity } from '../../lib/portal-auth'
 
 export default async function PatientPortalPage() {
-    const { clinicId, patient } = await getAuthenticatedPortalPatient()
-
-    const appointments = await prisma.appointment.findMany({
-        where: {
-            clinicId,
-            patientId: patient.id,
-            scheduledAt: { gte: new Date() },
-        },
-        include: { doctor: { select: { name: true } } },
-        orderBy: { scheduledAt: 'asc' },
-        take: 3,
+    const { clinicId, patientId } = await getPortalIdentity()
+    const patient = await prisma.patient.findFirst({
+        where: { clinicId, id: patientId },
     })
 
-    const documents = await prisma.payment.findMany({
-        where: {
-            clinicId,
-            patientId: patient.id,
-            OR: [{ receiptUrl: { not: null } }, { description: { not: null } }],
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 4,
-    })
+    const appointments = patient
+        ? await prisma.appointment.findMany({
+            where: {
+                clinicId,
+                patientId,
+                scheduledAt: { gte: new Date() },
+            },
+            include: { doctor: { select: { name: true } } },
+            orderBy: { scheduledAt: 'asc' },
+            take: 3,
+        })
+        : []
+
+    const documents = patient
+        ? await prisma.payment.findMany({
+            where: {
+                clinicId,
+                patientId,
+                OR: [{ receiptUrl: { not: null } }, { description: { not: null } }],
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 4,
+        })
+        : []
 
     const nextAppointment = appointments[0] ?? null
 

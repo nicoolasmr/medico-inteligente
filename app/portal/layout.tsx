@@ -1,14 +1,23 @@
 import '../globals.css'
 import { LogOut, UserCircle } from 'lucide-react'
 import { Toaster } from 'sonner'
-import { getAuthenticatedPortalPatient } from '../../lib/auth'
+import { prisma } from '../../lib/prisma'
+import { getPortalIdentity } from '../../lib/portal-auth'
 
 type PortalLayoutProps = {
     children: React.ReactNode
 }
 
 export default async function PortalLayout({ children }: PortalLayoutProps) {
-    const { patient } = await getAuthenticatedPortalPatient()
+    const { clinicId, patientId } = await getPortalIdentity()
+    const patient = await prisma.patient.findFirst({
+        where: { clinicId, id: patientId },
+        select: { name: true, email: true },
+    })
+
+    if (!patient) {
+        throw new Error('Portal patient not found for current identity')
+    }
 
     return (
         <div className="font-sans bg-bg-app min-h-screen text-text-primary">
