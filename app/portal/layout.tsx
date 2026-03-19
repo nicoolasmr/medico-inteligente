@@ -1,20 +1,23 @@
 import '../globals.css'
 import { LogOut, UserCircle } from 'lucide-react'
 import { Toaster } from 'sonner'
-import { getClinicId } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
+import { getPortalIdentity } from '../../lib/portal-auth'
 
 type PortalLayoutProps = {
     children: React.ReactNode
 }
 
 export default async function PortalLayout({ children }: PortalLayoutProps) {
-    const clinicId = await getClinicId()
-    const fallbackPatient = await prisma.patient.findFirst({
-        where: { clinicId },
-        orderBy: [{ lastVisitAt: 'desc' }, { createdAt: 'desc' }],
+    const { clinicId, patientId } = await getPortalIdentity()
+    const patient = await prisma.patient.findFirst({
+        where: { clinicId, id: patientId },
         select: { name: true, email: true },
     })
+
+    if (!patient) {
+        throw new Error('Portal patient not found for current identity')
+    }
 
     return (
         <div className="font-sans bg-bg-app min-h-screen text-text-primary">
@@ -30,8 +33,8 @@ export default async function PortalLayout({ children }: PortalLayoutProps) {
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3 pr-4 border-r border-bg-border">
                             <div className="text-right hidden sm:block">
-                                <p className="text-xs font-bold text-text-primary leading-none">{fallbackPatient?.name ?? 'Paciente da clínica'}</p>
-                                <p className="text-[10px] text-text-muted mt-0.5">{fallbackPatient?.email ?? 'Acesso autenticado'}</p>
+                                <p className="text-xs font-bold text-text-primary leading-none">{patient.name}</p>
+                                <p className="text-[10px] text-text-muted mt-0.5">{patient.email ?? 'Acesso autenticado'}</p>
                             </div>
                             <UserCircle size={24} className="text-brand-primary" />
                         </div>

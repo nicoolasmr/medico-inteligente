@@ -1,7 +1,7 @@
 import { Job, Worker } from 'bullmq'
 import { buildAutomationRedisProcessedKey, type AutomationPayload } from '../lib/automation'
 import { prisma } from '../lib/prisma'
-import { redis } from '../lib/redis'
+import { getRedis } from '../lib/redis'
 import { sendWhatsApp } from '../lib/whatsapp'
 
 type WorkerPayload = {
@@ -155,7 +155,7 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
             return
         }
 
-        await persistLog(job, {
+        await persistAutomationLog(job, {
             status: 'success',
             response: {
                 action: actionType,
@@ -173,7 +173,7 @@ export async function processAutomationJob(job: Job<WorkerPayload>) {
             alertType: 'automation_execution_failed',
         })
 
-        await persistLog(job, {
+        await persistAutomationLog(job, {
             status: 'failed',
             response: {
                 action: actionType,

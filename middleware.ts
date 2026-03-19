@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { apiRatelimit } from './lib/ratelimit'
 
 const PROTECTED_PREFIXES = [
+    '/portal',
     '/dashboard',
     '/patients',
     '/agenda',
@@ -14,6 +15,7 @@ const PROTECTED_PREFIXES = [
 ]
 
 const AUTH_PREFIXES = ['/login', '/register', '/forgot-password']
+const RATE_LIMIT_EXCLUDED_PREFIXES: string[] = []
 
 function getRequestIdentifier(request: NextRequest) {
     const forwardedFor = request.headers.get('x-forwarded-for')
@@ -22,17 +24,25 @@ function getRequestIdentifier(request: NextRequest) {
     return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
 }
 
+function isRateLimitedPath(pathname: string) {
+    const isApiRoute = pathname.startsWith('/api')
+    const isProtectedRoute = PROTECTED_PREFIXES.some(p => pathname.startsWith(p))
+    const isExcludedRoute = RATE_LIMIT_EXCLUDED_PREFIXES.some(p => pathname.startsWith(p))
+
+    return !isExcludedRoute && (isApiRoute || isProtectedRoute)
+}
+
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
     let response = NextResponse.next({ request })
 
-    if (pathname.startsWith('/api') || PROTECTED_PREFIXES.some(p => pathname.startsWith(p))) {
+    if (isRateLimitedPath(pathname)) {
         try {
             const identifier = getRequestIdentifier(request)
             const { success } = await apiRatelimit.limit(identifier)
 
             if (!success) {
-                return new NextResponse('Too Many Requests', { status: 429 })
+                return new Response('Too Many Requests', { status: 429 })
             }
         } catch (error) {
             console.error('[middleware] Rate limit check failed; continuing request.', error)
@@ -77,5 +87,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp)).*)'],
+    matcher: ['/api/:path*', '/((?!_next/static|_next/image|favicon.ico|.*\.(?:png|jpg|jpeg|gif|svg|ico|webp)).*)'],
 }
