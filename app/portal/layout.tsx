@@ -1,12 +1,22 @@
 import '../globals.css'
 import { Toaster } from 'sonner'
 import { LogOut, UserCircle } from 'lucide-react'
+import { Toaster } from 'sonner'
+import { getClinicId } from '../../lib/auth'
+import { prisma } from '../../lib/prisma'
 
 export default function PortalLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
+    const clinicId = await getClinicId()
+    const fallbackPatient = await prisma.patient.findFirst({
+        where: { clinicId },
+        orderBy: [{ lastVisitAt: 'desc' }, { createdAt: 'desc' }],
+        select: { name: true, email: true },
+    })
+
     return (
         <div className="font-sans bg-bg-app min-h-screen text-text-primary">
             {/* Patient Header */}
@@ -27,7 +37,7 @@ export default function PortalLayout({
                             </div>
                             <UserCircle size={24} className="text-brand-primary" />
                         </div>
-                        <button className="p-2 text-text-muted hover:text-brand-danger transition-colors" title="Sair do Portal">
+                        <button className="p-2 text-text-muted hover:text-brand-danger transition-colors" title="Sair do Portal" type="button">
                             <LogOut size={20} />
                         </button>
                     </div>

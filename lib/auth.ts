@@ -12,15 +12,10 @@ export async function getCurrentUser(): Promise<User> {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     if (sessionError || !session) redirect('/login')
 
-    const { data: user, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
+    const user = await ensureUserProfile(session)
+    if (!user) redirect('/login?error=profile_not_found')
 
-    if (error || !user) redirect('/login')
-
-    return user as User
+    return user
 }
 
 /**
@@ -33,15 +28,10 @@ export async function getClinicId(): Promise<string> {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) redirect('/login')
 
-    const { data } = await supabase
-        .from('users')
-        .select('clinic_id')
-        .eq('id', session.user.id)
-        .single()
+    const user = await ensureUserProfile(session)
+    if (!user) redirect('/login?error=profile_not_found')
 
-    if (!data) redirect('/login')
-
-    return data.clinic_id as string
+    return user.clinicId
 }
 
 /**

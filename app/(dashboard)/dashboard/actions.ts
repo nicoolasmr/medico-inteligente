@@ -17,10 +17,12 @@ export async function getDashboardData() {
     const [clinicId, user] = await Promise.all([getClinicId(), getCurrentUser()])
 
     const now = new Date()
+    const todayStart = startOfDay(now)
     const startMonth = startOfMonth(now)
     const endMonth = endOfMonth(now)
-    const lastMonthStart = startOfMonth(subMonths(now, 1))
-    const lastMonthEnd = endOfMonth(subMonths(now, 1))
+    const lastMonth = subMonths(now, 1)
+    const lastMonthStart = startOfMonth(lastMonth)
+    const lastMonthEnd = endOfMonth(lastMonth)
 
     const [
         currentPatients,

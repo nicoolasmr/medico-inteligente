@@ -133,9 +133,10 @@ export type AutomationLog = {
     triggerEvent: string
     actionType: string
     status: AutomationLogStatus
-    response: any
+    response: Record<string, unknown> | null
     createdAt: string
-    patient?: { name: string }
+    patient?: { name: string } | null
+    automation?: { name: string } | null
 }
 
 export type AiInsight = {
@@ -183,6 +184,8 @@ export type SmartAlert = {
     message: string
     count: number
     action: string
+    href: string
+    description?: string
 }
 
 export type TreatmentsByStage = Record<TreatmentStage, {

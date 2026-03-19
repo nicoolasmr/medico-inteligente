@@ -4,12 +4,34 @@ import { createAdminClient } from '../../../lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { slugify } from '../../../lib/utils'
 
-export async function registerClinic(data: {
+type RegisterClinicInput = {
     userName: string
     clinicName: string
     email: string
     password: string
-}) {
+}
+
+type RegisterClinicResult =
+    | { success: true; redirectTo: string }
+    | { success: false; error: string }
+
+function normalizeRegistrationError(message: string) {
+    if (message.includes('already been registered') || message.includes('User already registered')) {
+        return 'Este e-mail já está cadastrado. Tente fazer login.'
+    }
+
+    if (message.includes('duplicate key') || message.includes('clinics_slug_key')) {
+        return 'Já existe uma clínica com esse identificador. Tente outro nome.'
+    }
+
+    if (message.includes('Missing required environment variable')) {
+        return 'Configuração do Supabase incompleta no ambiente. Revise as variáveis da Vercel.'
+    }
+
+    return message
+}
+
+async function generateClinicSlug(clinicName: string) {
     const supabaseAdmin = createAdminClient()
     let createdUserId: string | null = null
     let createdClinicId: string | null = null
@@ -84,5 +106,7 @@ export async function registerClinic(data: {
         throw error
     }
 
-    redirect('/login?registered=true')
+        const rawMessage = error instanceof Error ? error.message : 'Não foi possível criar sua conta agora.'
+        return { success: false, error: normalizeRegistrationError(rawMessage) }
+    }
 }

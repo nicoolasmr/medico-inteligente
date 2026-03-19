@@ -15,17 +15,27 @@ const PROTECTED_PREFIXES = [
 
 const AUTH_PREFIXES = ['/login', '/register', '/forgot-password']
 
+function getRequestIdentifier(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (!forwardedFor) return '127.0.0.1'
+
+    return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
+}
+
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
     let response = NextResponse.next({ request })
 
-    // 1. Rate Limiting for API and sensitive routes
     if (pathname.startsWith('/api') || PROTECTED_PREFIXES.some(p => pathname.startsWith(p))) {
-        const ip = request.headers.get('x-forwarded-for') ?? '127.0.0.1'
-        const { success } = await apiRatelimit.limit(ip)
+        try {
+            const identifier = getRequestIdentifier(request)
+            const { success } = await apiRatelimit.limit(identifier)
 
-        if (!success) {
-            return new NextResponse('Too Many Requests', { status: 429 })
+            if (!success) {
+                return new NextResponse('Too Many Requests', { status: 429 })
+            }
+        } catch (error) {
+            console.error('[middleware] Rate limit check failed; continuing request.', error)
         }
     }
 

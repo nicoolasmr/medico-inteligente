@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { getDashboardData } from './actions'
 import { useEffect, useState } from 'react'
 import {
     Users,
@@ -102,12 +101,10 @@ export default function DashboardPage() {
                                         <div>
                                             <p className="text-sm font-medium text-text-primary">{alert.message}</p>
                                             <p className="text-xs text-text-secondary">{alert.count} registros identificados</p>
+                                            {alert.description ? <p className="text-[11px] text-text-muted mt-1">{alert.description}</p> : null}
                                         </div>
                                     </div>
-                                    <Link
-                                        href={alert.type === 'warning' ? '/patients' : alert.type === 'opportunity' ? '/pipeline' : '#'}
-                                        className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline"
-                                    >
+                                    <Link href={alert.href} className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline">
                                         {alert.action}
                                         <ChevronRight size={14} />
                                     </Link>
@@ -116,8 +113,29 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="card p-6 h-[300px] flex items-center justify-center border-dashed text-text-muted">
-                        Gráfico de Atração vs Retenção (Em Breve)
+                    <div className="card p-6 border-dashed">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Próximos agendamentos</h3>
+                            <Link href="/agenda" className="text-xs font-semibold text-brand-primary hover:underline">Ver agenda</Link>
+                        </div>
+                        {data.upcomingAppointments.length > 0 ? (
+                            <div className="space-y-3">
+                                {data.upcomingAppointments.map(appointment => (
+                                    <div key={appointment.id} className="rounded-sm border border-bg-border bg-bg-surface px-4 py-3 flex items-center justify-between gap-4">
+                                        <div>
+                                            <p className="text-sm font-medium text-text-primary">{appointment.patientName}</p>
+                                            <p className="text-xs text-text-secondary">{appointment.type} • {appointment.doctorName}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-semibold text-brand-primary">{formatDateTime(appointment.scheduledAt)}</p>
+                                            <p className="text-[11px] uppercase tracking-wider text-text-muted">{appointment.status}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="h-[180px] flex items-center justify-center text-text-muted">Nenhum agendamento futuro encontrado.</div>
+                        )}
                     </div>
                 </div>
 
