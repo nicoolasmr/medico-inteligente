@@ -6,19 +6,12 @@ import { getClinicId } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { redis } from '../../../lib/redis'
 import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
+import { buildAutomationIdempotencyKey, buildAutomationJobName, type AutomationPayload } from '../../../lib/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
 
 const automationQueue = new Queue('automations', { connection: redis })
 
-type TriggerPayload = {
-    patient?: {
-        id?: string
-        name?: string
-        phone?: string | null
-    }
-    time?: string
-    [key: string]: unknown
-}
+type TriggerPayload = AutomationPayload
 
 function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback
@@ -75,7 +68,7 @@ export async function triggerEvent(event: string, payload: TriggerPayload) {
     })
 
     for (const rule of rules) {
-        await automationQueue.add(rule.name, {
+        const jobData = {
             automationId: rule.id,
             clinicId,
             event,
@@ -84,7 +77,14 @@ export async function triggerEvent(event: string, payload: TriggerPayload) {
             actionType: rule.actionType,
             triggerEvent: rule.triggerEvent,
             delayMinutes: rule.delayMinutes
+        }
+        const idempotencyKey = buildAutomationIdempotencyKey({ automationId: rule.id, clinicId, event, payload })
+
+        await automationQueue.add(buildAutomationJobName({ automationId: rule.id, clinicId, event, payload }), {
+            ...jobData,
+            idempotencyKey,
         }, {
+            jobId: idempotencyKey,
             delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
             attempts: 3,
             removeOnComplete: 100,
