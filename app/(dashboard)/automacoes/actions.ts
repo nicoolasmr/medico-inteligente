@@ -5,11 +5,11 @@ import { getClinicId } from '../../../lib/auth'
 import { buildAutomationIdempotencyKey, buildAutomationJobName, type AutomationPayload } from '../../../lib/automation'
 import { prisma } from '../../../lib/prisma'
 import { getAutomationQueue } from '../../../lib/queue'
-import { RedisUnavailableError } from '../../../lib/redis'
+import { RedisUnavailableError, isRedisConfigured } from '../../../lib/redis'
 import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
 
-type TriggerPayload = AutomationPayload
+export const AUTOMATION_UNAVAILABLE_MESSAGE = 'Automações estão em modo somente leitura no momento. Configure o REDIS_URL para reativar execuções e agendamentos.'
 
 export type AutomationRuntimeStatus = {
     available: boolean
@@ -29,23 +29,17 @@ function isRedisUnavailableError(error: unknown) {
 }
 
 function getAutomationRuntimeStatus(): AutomationRuntimeStatus {
-    try {
-        getAutomationQueue()
-
+    if (!isRedisConfigured()) {
         return {
-            available: true,
-            mode: 'full',
+            available: false,
+            mode: 'read-only',
+            message: AUTOMATION_UNAVAILABLE_MESSAGE,
         }
-    } catch (error: unknown) {
-        if (isRedisUnavailableError(error)) {
-            return {
-                available: false,
-                mode: 'read-only',
-                message: AUTOMATION_UNAVAILABLE_MESSAGE,
-            }
-        }
+    }
 
-        throw error
+    return {
+        available: true,
+        mode: 'full',
     }
 }
 
@@ -115,22 +109,33 @@ export async function triggerEvent(event: string, payload: TriggerPayload): Prom
             where: { clinicId, triggerEvent: event, isActive: true },
         })
 
-        const queue = getAutomationQueue()
+        const queue = getAutomationQueue({ required: false })
+        if (!queue) {
+            console.warn('[automacoes] Queue unavailable; automation trigger skipped.', {
+                clinicId,
+                event,
+                rules: rules.length,
+            })
+            return { success: true, data: null }
+        }
 
         for (const rule of rules) {
+            const jobData = {
+                automationId: rule.id,
+                clinicId,
+                event,
+                payload,
+                config: rule.config,
+                actionType: rule.actionType,
+                triggerEvent: rule.triggerEvent,
+                delayMinutes: rule.delayMinutes,
+            }
             const idempotencyKey = buildAutomationIdempotencyKey({ automationId: rule.id, clinicId, event, payload })
 
             await queue.add(
                 buildAutomationJobName({ automationId: rule.id, clinicId, event, payload }),
                 {
-                    automationId: rule.id,
-                    clinicId,
-                    event,
-                    payload,
-                    config: rule.config,
-                    actionType: rule.actionType,
-                    triggerEvent: rule.triggerEvent,
-                    delayMinutes: rule.delayMinutes,
+                    ...jobData,
                     idempotencyKey,
                 },
                 {

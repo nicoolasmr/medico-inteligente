@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockedQueue = vi.fn()
+const mockedQueueAdd = vi.fn()
+const mockedQueue = vi.fn().mockImplementation(() => ({ add: mockedQueueAdd }))
 const mockedGetClinicId = vi.fn()
 const mockedFindMany = vi.fn()
 const mockedCreate = vi.fn()
@@ -61,7 +62,9 @@ describe('automation runtime without Redis', () => {
     it('throws a runtime error only when Redis is requested', async () => {
         const redisModule = await import('../lib/redis')
 
+        expect(redisModule.isRedisConfigured()).toBe(false)
         expect(() => redisModule.getRedisUrl()).toThrowError(/REDIS_URL/)
+        expect(redisModule.getRedisIfAvailable()).toBeNull()
         expect(() => redisModule.getRedis()).toThrowError(/Automações indisponíveis/)
     })
 
@@ -102,15 +105,22 @@ describe('automation runtime without Redis', () => {
             error: 'Automações estão em modo somente leitura no momento. Configure o REDIS_URL para reativar execuções e agendamentos.',
         })
 
-        await expect(actions.triggerEvent('appointment_created', {})).resolves.toEqual({
-            success: false,
-            error: 'Automações estão em modo somente leitura no momento. Configure o REDIS_URL para reativar execuções e agendamentos.',
-        })
-
         expect(mockedCreate).not.toHaveBeenCalled()
         expect(mockedUpdate).not.toHaveBeenCalled()
         expect(mockedDelete).not.toHaveBeenCalled()
         expect(mockedQueue).not.toHaveBeenCalled()
         expect(mockedRevalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('skips event dispatch gracefully when Redis is unavailable', async () => {
+        const actions = await import('../app/(dashboard)/automacoes/actions')
+
+        await expect(actions.triggerEvent('appointment_created', {})).resolves.toEqual({
+            success: true,
+            data: null,
+        })
+
+        expect(mockedQueue).not.toHaveBeenCalled()
+        expect(mockedQueueAdd).not.toHaveBeenCalled()
     })
 })

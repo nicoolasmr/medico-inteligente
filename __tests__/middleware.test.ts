@@ -36,7 +36,8 @@ describe('middleware rate limiting', () => {
 
         expect(response.status).toBe(200)
         expect(limitMock).toHaveBeenCalledWith('198.51.100.10')
-        expect(config.matcher).toContain('/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp)).*)')
+        expect(config.matcher).toContain('/api/:path*')
+        expect(config.matcher).not.toContain('/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp)).*)')
     })
 
     it('returns 429 after an API route exceeds the rate limit', async () => {
