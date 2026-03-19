@@ -5,34 +5,34 @@ import { getPortalIdentity } from '../../lib/portal-auth'
 
 export default async function PatientPortalPage() {
     const { clinicId, patientId } = await getPortalIdentity()
-    const patient = await prisma.patient.findFirst({
-        where: { clinicId, id: patientId },
+    const patient = await prisma.patient.findUnique({
+        where: { id: patientId },
     })
 
-    const appointments = patient
-        ? await prisma.appointment.findMany({
-            where: {
-                clinicId,
-                patientId,
-                scheduledAt: { gte: new Date() },
-            },
-            include: { doctor: { select: { name: true } } },
-            orderBy: { scheduledAt: 'asc' },
-            take: 3,
-        })
-        : []
+    if (!patient || patient.clinicId !== clinicId) {
+        throw new Error('Portal patient not found for current identity')
+    }
 
-    const documents = patient
-        ? await prisma.payment.findMany({
-            where: {
-                clinicId,
-                patientId,
-                OR: [{ receiptUrl: { not: null } }, { description: { not: null } }],
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 4,
-        })
-        : []
+    const appointments = await prisma.appointment.findMany({
+        where: {
+            patientId,
+            clinicId,
+            scheduledAt: { gte: new Date() },
+        },
+        include: { doctor: { select: { name: true } } },
+        orderBy: { scheduledAt: 'asc' },
+        take: 3,
+    })
+
+    const documents = await prisma.payment.findMany({
+        where: {
+            patientId,
+            clinicId,
+            OR: [{ receiptUrl: { not: null } }, { description: { not: null } }],
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 4,
+    })
 
     const nextAppointment = appointments[0] ?? null
 
