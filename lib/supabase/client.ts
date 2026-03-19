@@ -1,6 +1,20 @@
 'use client'
 
 import { createBrowserClient } from '@supabase/ssr'
+import { getOptionalEnv } from '../env'
+
+let browserClient: ReturnType<typeof createBrowserClient> | null = null
+
+function createMissingEnvProxy(message: string) {
+    return new Proxy(
+        {},
+        {
+            get() {
+                throw new Error(message)
+            },
+        }
+    ) as ReturnType<typeof createBrowserClient>
+}
 
 let browserClient: ReturnType<typeof createBrowserClient> | null = null
 
