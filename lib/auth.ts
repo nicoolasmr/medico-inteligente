@@ -1,4 +1,4 @@
-import type { Session, User as SupabaseAuthUser } from '@supabase/supabase-js'
+import type { Session } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from './supabase/admin'
 import { createClient } from './supabase/server'
@@ -10,7 +10,7 @@ type UserMetadata = {
     role?: string
 }
 
-async function ensureUserProfile(session: Session) {
+export async function ensureUserProfile(session: Session) {
     const supabase = await createClient()
 
     const { data: user, error } = await supabase
@@ -48,10 +48,6 @@ async function ensureUserProfile(session: Session) {
     return repairedUser as User
 }
 
-/**
- * Get the current authenticated user with clinic context.
- * Throws/redirects if not authenticated.
- */
 export async function getCurrentUser(): Promise<User> {
     const supabase = await createClient()
 
@@ -64,10 +60,6 @@ export async function getCurrentUser(): Promise<User> {
     return user
 }
 
-/**
- * Get the clinic_id for the current authenticated user.
- * Fast version — only fetches clinic_id.
- */
 export async function getClinicId(): Promise<string> {
     const supabase = await createClient()
 
@@ -80,9 +72,6 @@ export async function getClinicId(): Promise<string> {
     return user.clinicId
 }
 
-/**
- * Check if current user has one of the required roles.
- */
 export async function requireRole(
     allowedRoles: User['role'][]
 ): Promise<User> {

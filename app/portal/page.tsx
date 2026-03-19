@@ -1,20 +1,19 @@
 import { Calendar, ChevronRight, Clock, FileText, MessageCircle, Plus, ShieldCheck } from 'lucide-react'
-import { getClinicId } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
 import { formatDate, formatDateTime, formatTime } from '../../lib/utils'
+import { getPortalIdentity } from '../../lib/portal-auth'
 
 export default async function PatientPortalPage() {
-    const clinicId = await getClinicId()
+    const { clinicId, patientId } = await getPortalIdentity()
     const patient = await prisma.patient.findFirst({
-        where: { clinicId },
-        orderBy: [{ lastVisitAt: 'desc' }, { createdAt: 'desc' }],
+        where: { clinicId, id: patientId },
     })
 
     const appointments = patient
         ? await prisma.appointment.findMany({
             where: {
                 clinicId,
-                patientId: patient.id,
+                patientId,
                 scheduledAt: { gte: new Date() },
             },
             include: { doctor: { select: { name: true } } },
@@ -27,7 +26,7 @@ export default async function PatientPortalPage() {
         ? await prisma.payment.findMany({
             where: {
                 clinicId,
-                patientId: patient.id,
+                patientId,
                 OR: [{ receiptUrl: { not: null } }, { description: { not: null } }],
             },
             orderBy: { createdAt: 'desc' },

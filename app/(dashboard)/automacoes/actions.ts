@@ -8,7 +8,20 @@ import { redis } from '../../../lib/redis'
 import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
 
-const automationQueue = new Queue('automations', { connection: redis })
+let automationQueue: Queue | null | undefined
+
+function getAutomationQueue() {
+    if (automationQueue !== undefined) return automationQueue
+
+    try {
+        automationQueue = new Queue('automations', { connection: redis })
+    } catch (error) {
+        console.error('[automacoes] Queue unavailable; automation triggers will be skipped.', error)
+        automationQueue = null
+    }
+
+    return automationQueue
+}
 
 type TriggerPayload = {
     patient?: {
@@ -74,8 +87,11 @@ export async function triggerEvent(event: string, payload: TriggerPayload) {
         where: { clinicId, triggerEvent: event, isActive: true }
     })
 
+    const queue = getAutomationQueue()
+    if (!queue) return
+
     for (const rule of rules) {
-        await automationQueue.add(rule.name, {
+        await queue.add(rule.name, {
             automationId: rule.id,
             clinicId,
             event,
