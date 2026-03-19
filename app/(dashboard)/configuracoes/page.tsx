@@ -1,5 +1,5 @@
 import { getClinicProfile } from './actions'
-import { SettingsTabs } from '@/components/configuracoes/SettingsTabs'
+import { SettingsTabs } from '../../../components/configuracoes/SettingsTabs'
 
 export default async function SettingsPage() {
     const clinic = await getClinicProfile()

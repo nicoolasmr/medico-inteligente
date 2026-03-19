@@ -18,9 +18,9 @@ const config: Config = {
                     warning: '#FFA502',
                     success: '#2ED573',
                 },
-                surface: {
+                bg: {
                     app: '#0A0D14',
-                    base: '#0F1117',
+                    surface: '#0F1117',
                     elevated: '#161B27',
                     hover: '#1C2333',
                     border: '#1E2537',
@@ -63,7 +63,7 @@ const config: Config = {
                     from: { transform: 'translateX(100%)' },
                     to: { transform: 'translateX(0)' },
                 },
-                'shimmer': {
+                shimmer: {
                     '100%': { transform: 'translateX(100%)' },
                 },
             },
@@ -72,7 +72,7 @@ const config: Config = {
                 'fade-in-scale': 'fade-in-scale 0.2s ease-out',
                 'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
                 'slide-in-right': 'slide-in-right 0.3s ease-out',
-                'shimmer': 'shimmer 1.5s infinite',
+                shimmer: 'shimmer 1.5s infinite',
             },
             boxShadow: {
                 card: '0 1px 3px 0 rgba(0,0,0,0.4)',
