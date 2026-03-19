@@ -1,13 +1,7 @@
-import {
-    Calendar,
-    FileText,
-    Clock,
-    Plus,
-    ChevronRight,
-    ShieldCheck,
-    MessageCircle
-} from 'lucide-react'
-import { cn, formatDate, formatTime } from '../../lib/utils'
+import { Calendar, ChevronRight, Clock, FileText, MessageCircle, Plus, ShieldCheck } from 'lucide-react'
+import { getClinicId } from '../../lib/auth'
+import { prisma } from '../../lib/prisma'
+import { formatDate, formatDateTime, formatTime } from '../../lib/utils'
 
 export default async function PatientPortalPage() {
     const clinicId = await getClinicId()
@@ -46,8 +40,8 @@ export default async function PatientPortalPage() {
     return (
         <div className="space-y-10 py-4">
             <section>
-                <h1 className="text-3xl font-display text-text-primary tracking-tight mb-2">Olá!</h1>
-                <p className="text-text-secondary text-sm">Bem-vindo ao seu espaço de saúde digital.</p>
+                <h1 className="text-3xl font-display text-text-primary tracking-tight mb-2">Olá, {patient?.name?.split(' ')[0] ?? 'Paciente'}!</h1>
+                <p className="text-text-secondary text-sm">Bem-vindo ao seu espaço de saúde digital com dados atualizados da clínica.</p>
             </section>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

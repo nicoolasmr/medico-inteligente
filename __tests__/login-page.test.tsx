@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const pushMock = vi.fn()
 const refreshMock = vi.fn()
 const signInWithPasswordMock = vi.fn()
-const searchParamsState = new URLSearchParams()
+let searchParamsValue = ''
 
 vi.mock('next/link', () => ({
     default: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
@@ -20,7 +20,7 @@ vi.mock('next/navigation', () => ({
         replace: vi.fn(),
         prefetch: vi.fn(),
     }),
-    useSearchParams: () => searchParamsState,
+    useSearchParams: () => new URLSearchParams(searchParamsValue),
 }))
 
 vi.mock('../lib/supabase/client', () => ({
@@ -38,11 +38,11 @@ describe('LoginPage', () => {
         pushMock.mockReset()
         refreshMock.mockReset()
         signInWithPasswordMock.mockReset()
-        searchParamsState.forEach((_, key) => searchParamsState.delete(key))
+        searchParamsValue = ''
     })
 
     it('shows the registration success notice from the query string', async () => {
-        searchParamsState.set('registered', 'true')
+        searchParamsValue = 'registered=true'
 
         render(<LoginPage />)
 
@@ -51,7 +51,7 @@ describe('LoginPage', () => {
     })
 
     it('shows the profile recovery notice from the query string', async () => {
-        searchParamsState.set('error', 'profile_not_found')
+        searchParamsValue = 'error=profile_not_found'
 
         render(<LoginPage />)
 

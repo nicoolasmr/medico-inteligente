@@ -1,15 +1,14 @@
 import '../globals.css'
-import { Toaster } from 'sonner'
 import { LogOut, UserCircle } from 'lucide-react'
 import { Toaster } from 'sonner'
 import { getClinicId } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
 
-export default function PortalLayout({
-    children,
-}: {
+type PortalLayoutProps = {
     children: React.ReactNode
-}) {
+}
+
+export default async function PortalLayout({ children }: PortalLayoutProps) {
     const clinicId = await getClinicId()
     const fallbackPatient = await prisma.patient.findFirst({
         where: { clinicId },
@@ -19,7 +18,6 @@ export default function PortalLayout({
 
     return (
         <div className="font-sans bg-bg-app min-h-screen text-text-primary">
-            {/* Patient Header */}
             <header className="h-[var(--header-height)] border-b border-bg-border bg-bg-surface sticky top-0 z-50">
                 <div className="max-w-5xl mx-auto h-full px-6 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -32,8 +30,8 @@ export default function PortalLayout({
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3 pr-4 border-r border-bg-border">
                             <div className="text-right hidden sm:block">
-                                <p className="text-xs font-bold text-text-primary leading-none">Paciente</p>
-                                <p className="text-[10px] text-text-muted mt-0.5">Paciente</p>
+                                <p className="text-xs font-bold text-text-primary leading-none">{fallbackPatient?.name ?? 'Paciente da clínica'}</p>
+                                <p className="text-[10px] text-text-muted mt-0.5">{fallbackPatient?.email ?? 'Acesso autenticado'}</p>
                             </div>
                             <UserCircle size={24} className="text-brand-primary" />
                         </div>

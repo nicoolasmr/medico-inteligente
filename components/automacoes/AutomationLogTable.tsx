@@ -1,14 +1,17 @@
 'use client'
 
-import {
-    CheckCircle,
-    XCircle,
-    ExternalLink,
-    ChevronRight,
-    History
-} from 'lucide-react'
+import { CheckCircle, ChevronRight, History, XCircle } from 'lucide-react'
 import type { AutomationLog } from '../../types'
-import { cn, timeAgo, formatDateTime } from '../../lib/utils'
+import { cn, formatDateTime, timeAgo } from '../../lib/utils'
+
+function getLogDetails(log: AutomationLog) {
+    const response = log.response ?? {}
+    const action = typeof response.action === 'string' ? response.action : log.actionType
+    const error = typeof response.error === 'string' ? response.error : null
+    const destination = typeof response.destination === 'string' ? response.destination : null
+
+    return { action, error, destination }
+}
 
 export function AutomationLogTable({ logs }: { logs: AutomationLog[] }) {
     return (
