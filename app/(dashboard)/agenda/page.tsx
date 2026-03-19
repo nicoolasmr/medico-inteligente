@@ -1,4 +1,4 @@
-import { WeekCalendar } from '@/components/agenda/WeekCalendar'
+import { WeekCalendar } from '../../../components/agenda/WeekCalendar'
 
 export default function AgendaPage() {
     return (

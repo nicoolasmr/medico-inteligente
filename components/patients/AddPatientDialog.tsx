@@ -10,11 +10,11 @@ import {
     DialogTitle,
     DialogDescription,
     DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { createPatientSchema, type CreatePatientInput } from '@/lib/validations/patient'
-import { createPatient } from '@/app/(dashboard)/patients/actions'
+} from '../ui/dialog'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { createPatientSchema, type CreatePatientInput } from '../../lib/validations/patient'
+import { createPatient } from '../../app/(dashboard)/patients/actions'
 import { toast } from 'sonner'
 import { User, Phone, Mail, FileText } from 'lucide-react'
 

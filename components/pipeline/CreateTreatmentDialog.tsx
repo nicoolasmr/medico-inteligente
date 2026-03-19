@@ -10,15 +10,15 @@ import {
     DialogTitle,
     DialogDescription,
     DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { createTreatmentSchema, type CreateTreatmentInput } from '@/lib/validations/treatment'
-import { createTreatment } from '@/app/(dashboard)/pipeline/actions'
-import { searchPatients } from '@/app/(dashboard)/patients/actions'
+} from '../ui/dialog'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { createTreatmentSchema, type CreateTreatmentInput } from '../../lib/validations/treatment'
+import { createTreatment } from '../../app/(dashboard)/pipeline/actions'
+import { searchPatients } from '../../app/(dashboard)/patients/actions'
 import { toast } from 'sonner'
 import { User, Activity, DollarSign, Search, Plus } from 'lucide-react'
-import type { Patient } from '@/types'
+import type { Patient } from '../../types'
 
 interface CreateTreatmentDialogProps {
     open: boolean

@@ -10,14 +10,14 @@ import {
     DialogTitle,
     DialogDescription,
     DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { createAutomationSchema, type CreateAutomationInput } from '@/lib/validations/automation'
-import { createAutomation } from '@/app/(dashboard)/automacoes/actions'
+} from '../ui/dialog'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { createAutomationSchema, type CreateAutomationInput } from '../../lib/validations/automation'
+import { createAutomation } from '../../app/(dashboard)/automacoes/actions'
 import { toast } from 'sonner'
 import { Zap, MessageSquare, Clock, Shield } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../../lib/utils'
 
 interface CreateAutomationDialogProps {
     open: boolean
