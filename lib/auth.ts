@@ -2,8 +2,6 @@ import type { Session } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from './supabase/admin'
 import { createClient } from './supabase/server'
-import { getOptionalEnv, requireEnv } from './env'
-import { prisma } from './prisma'
 import type { User } from '../types'
 
 type UserMetadata = {
@@ -11,6 +9,11 @@ type UserMetadata = {
     name?: string
     role?: string
 }
+
+export const ONBOARDING_SUPPORT_MESSAGES = {
+    PROFILE_RETRY: 'Não foi possível validar o perfil da clínica neste login. Tente novamente. Se o problema continuar, informe o código ONB-PROFILE-RETRY ao suporte.',
+    PROFILE_UNAVAILABLE: 'Não foi possível validar o perfil da clínica. Informe o código ONB-PROFILE-MISSING ao suporte.',
+} as const
 
 export async function ensureUserProfile(session: Session) {
     const supabase = await createClient()
@@ -28,7 +31,12 @@ export async function ensureUserProfile(session: Session) {
     const metadata = (session.user.user_metadata ?? {}) as UserMetadata
     const clinicId = metadata.clinic_id
 
-    if (!clinicId) return null
+    if (!clinicId) {
+        console.warn('[onboarding] perfil interno ausente e metadata sem clinic_id', {
+            userId: session.user.id,
+        })
+        return null
+    }
 
     const admin = createAdminClient()
     const { data: repairedUser, error: repairError } = await admin
@@ -44,6 +52,12 @@ export async function ensureUserProfile(session: Session) {
         .single()
 
     if (repairError || !repairedUser) {
+        console.error('[onboarding] falha ao reparar perfil interno', {
+            userId: session.user.id,
+            clinicId,
+            error: repairError?.message ?? 'empty result',
+            recommendation: 'Mover a criação/sincronização do perfil para trigger no banco ligada a auth.users.',
+        })
         return null
     }
 
