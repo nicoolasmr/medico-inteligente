@@ -1,10 +1,7 @@
 import IORedis from 'ioredis'
+import { requireEnv } from './env'
 
-if (!process.env.REDIS_URL) {
-    throw new Error('REDIS_URL is not defined')
-}
-
-export const redis = new IORedis(process.env.REDIS_URL, {
+export const redis = new IORedis(requireEnv('REDIS_URL'), {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
 })

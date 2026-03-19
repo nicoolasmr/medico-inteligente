@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { getTreatmentsByStage } from './actions'
-import { KanbanBoard } from '@/components/pipeline/KanbanBoard'
-import { CreateTreatmentDialog } from '@/components/pipeline/CreateTreatmentDialog'
+import { KanbanBoard } from '../../../components/pipeline/KanbanBoard'
+import { CreateTreatmentDialog } from '../../../components/pipeline/CreateTreatmentDialog'
 import { Plus, Filter, Search, Download } from 'lucide-react'
 import { toast } from 'sonner'
-import type { TreatmentsByStage } from '@/types'
+import type { TreatmentsByStage } from '../../../types'
 
 export default function PipelinePage() {
     const [data, setData] = useState<TreatmentsByStage | null>(null)
