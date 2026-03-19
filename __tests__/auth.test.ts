@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser } from '../lib/auth'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '../lib/supabase/server'
 
-vi.mock('@/lib/supabase/server', () => ({
+vi.mock('../lib/supabase/server', () => ({
     createClient: vi.fn(),
 }))
 
