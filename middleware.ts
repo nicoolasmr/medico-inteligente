@@ -12,10 +12,10 @@ const PROTECTED_PREFIXES = [
     '/automacoes',
     '/insights',
     '/configuracoes',
-]
+] as const
 
-const AUTH_PREFIXES = ['/login', '/register', '/forgot-password']
-const RATE_LIMIT_EXCLUDED_PREFIXES: string[] = []
+const AUTH_PREFIXES = ['/login', '/register', '/forgot-password'] as const
+const RATE_LIMITED_PREFIXES = ['/api', ...PROTECTED_PREFIXES] as const
 
 function getRequestIdentifier(request: NextRequest) {
     const forwardedFor = request.headers.get('x-forwarded-for')
@@ -24,12 +24,12 @@ function getRequestIdentifier(request: NextRequest) {
     return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
 }
 
-function isRateLimitedPath(pathname: string) {
-    const isApiRoute = pathname.startsWith('/api')
-    const isProtectedRoute = PROTECTED_PREFIXES.some(p => pathname.startsWith(p))
-    const isExcludedRoute = RATE_LIMIT_EXCLUDED_PREFIXES.some(p => pathname.startsWith(p))
+function matchesPrefix(pathname: string, prefixes: readonly string[]) {
+    return prefixes.some(prefix => pathname.startsWith(prefix))
+}
 
-    return !isExcludedRoute && (isApiRoute || isProtectedRoute)
+function isRateLimitedPath(pathname: string) {
+    return matchesPrefix(pathname, RATE_LIMITED_PREFIXES)
 }
 
 export async function middleware(request: NextRequest) {
@@ -62,16 +62,16 @@ export async function middleware(request: NextRequest) {
                 getAll: () => request.cookies.getAll(),
                 setAll: (pairs: { name: string; value: string; options: any }[]) =>
                     pairs.forEach(({ name, value, options }) =>
-                        response.cookies.set(name, value, options)
+                        response.cookies.set(name, value, options),
                     ),
             },
-        }
+        },
     )
 
     const { data: { session } } = await supabase.auth.getSession()
 
-    const isProtected = PROTECTED_PREFIXES.some(p => pathname.startsWith(p))
-    const isAuthRoute = AUTH_PREFIXES.some(p => pathname.startsWith(p))
+    const isProtected = matchesPrefix(pathname, PROTECTED_PREFIXES)
+    const isAuthRoute = matchesPrefix(pathname, AUTH_PREFIXES)
 
     if (isProtected && !session) {
         const url = new URL('/login', request.url)
@@ -87,5 +87,19 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/api/:path*', '/((?!_next/static|_next/image|favicon.ico|.*\.(?:png|jpg|jpeg|gif|svg|ico|webp)).*)'],
+    matcher: [
+        '/api/:path*',
+        '/portal/:path*',
+        '/dashboard/:path*',
+        '/patients/:path*',
+        '/agenda/:path*',
+        '/pipeline/:path*',
+        '/financeiro/:path*',
+        '/automacoes/:path*',
+        '/insights/:path*',
+        '/configuracoes/:path*',
+        '/login',
+        '/register',
+        '/forgot-password',
+    ],
 }

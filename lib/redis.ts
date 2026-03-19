@@ -22,17 +22,33 @@ export function getRedisUrl(): string {
     return redisUrl
 }
 
+export function isRedisConfigured(): boolean {
+    return Boolean(getOptionalEnv('REDIS_URL'))
+}
+
+export function createRedisClient(redisUrl = getRedisUrl()): IORedis {
+    return new IORedis(redisUrl, {
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+    })
+}
+
 export function getRedis(): IORedis {
     if (redisInstance) {
         return redisInstance
     }
 
-    redisInstance = new IORedis(getRedisUrl(), {
-        maxRetriesPerRequest: null,
-        enableReadyCheck: false,
-    })
+    redisInstance = createRedisClient()
 
     return redisInstance
+}
+
+export function getRedisIfAvailable(): IORedis | null {
+    if (!isRedisConfigured()) {
+        return null
+    }
+
+    return getRedis()
 }
 
 export function resetRedisForTests() {

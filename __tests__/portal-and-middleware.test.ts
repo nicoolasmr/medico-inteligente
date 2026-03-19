@@ -84,7 +84,7 @@ describe('portal isolation and middleware protection', () => {
         const response = await middleware(request as any)
         expect(apiRatelimit.limit).toHaveBeenCalledWith('1.2.3.4')
         expect(response).toEqual(expect.objectContaining({ type: 'redirect' }))
-        expect(response.headers.location).toContain('/login?next=%2Fdashboard')
+        expect((response.headers as any).location).toContain('/login?next=%2Fdashboard')
     })
 
     it('should rate limit api routes via matcher-compatible middleware execution', async () => {
