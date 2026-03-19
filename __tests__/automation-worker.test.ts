@@ -37,9 +37,13 @@ vi.mock('../lib/auth', () => ({
 }))
 
 vi.mock('../lib/redis', () => ({
+    getRedis: vi.fn(() => ({ get: redisGet, set: redisSet })),
     redis: {
         get: redisGet,
         set: redisSet,
+    },
+    RedisUnavailableError: class RedisUnavailableError extends Error {
+        code = 'REDIS_UNAVAILABLE'
     },
 }))
 

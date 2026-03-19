@@ -2,32 +2,30 @@
 
 import { revalidatePath } from 'next/cache'
 import { getClinicId } from '../../../lib/auth'
-import { prisma } from '../../../lib/prisma'
-import { RedisUnavailableError } from '../../../lib/redis'
-import { getAutomationQueue } from '../../../lib/queue'
-import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import { buildAutomationIdempotencyKey, buildAutomationJobName, type AutomationPayload } from '../../../lib/automation'
+import { prisma } from '../../../lib/prisma'
+import { getAutomationQueue } from '../../../lib/queue'
+import { RedisUnavailableError } from '../../../lib/redis'
+import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
-
-let automationQueue: Queue | null | undefined
-
-function getAutomationQueue() {
-    if (automationQueue !== undefined) return automationQueue
-
-    try {
-        automationQueue = new Queue('automations', { connection: redis })
-    } catch (error) {
-        console.error('[automacoes] Queue unavailable; automation triggers will be skipped.', error)
-        automationQueue = null
-    }
-
-    return automationQueue
-}
 
 type TriggerPayload = AutomationPayload
 
+export type AutomationRuntimeStatus = {
+    available: boolean
+    mode: 'full' | 'read-only'
+    message?: string
+}
+
+const AUTOMATION_UNAVAILABLE_MESSAGE = 'Automações estão em modo somente leitura no momento. Configure o REDIS_URL para reativar execuções e agendamentos.'
+
 function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback
+}
+
+function isRedisUnavailableError(error: unknown) {
+    return error instanceof RedisUnavailableError
+        || (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'REDIS_UNAVAILABLE')
 }
 
 function getAutomationRuntimeStatus(): AutomationRuntimeStatus {
@@ -39,7 +37,7 @@ function getAutomationRuntimeStatus(): AutomationRuntimeStatus {
             mode: 'full',
         }
     } catch (error: unknown) {
-        if (error instanceof RedisUnavailableError) {
+        if (isRedisUnavailableError(error)) {
             return {
                 available: false,
                 mode: 'read-only',
@@ -63,7 +61,7 @@ export async function getAutomations(): Promise<Automation[]> {
     const clinicId = await getClinicId()
     return prisma.automation.findMany({
         where: { clinicId },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
     }) as unknown as Automation[]
 }
 
@@ -82,8 +80,8 @@ export async function createAutomation(data: CreateAutomationInput): Promise<Act
             data: {
                 ...validatedData,
                 clinicId,
-                isActive: true
-            }
+                isActive: true,
+            },
         })
 
         revalidatePath('/automacoes')
@@ -100,7 +98,7 @@ export async function toggleAutomation(id: string, active: boolean): Promise<Act
         const clinicId = await getClinicId()
         const automation = await prisma.automation.update({
             where: { id, clinicId },
-            data: { isActive: active }
+            data: { isActive: active },
         })
 
         revalidatePath('/automacoes')
@@ -113,63 +111,42 @@ export async function toggleAutomation(id: string, active: boolean): Promise<Act
 export async function triggerEvent(event: string, payload: TriggerPayload): Promise<ActionResult<null>> {
     try {
         const clinicId = await getClinicId()
-
-    const rules = await prisma.automation.findMany({
-        where: { clinicId, triggerEvent: event, isActive: true }
-    })
-
-    const queue = getAutomationQueue()
-    if (!queue) return
-
-    for (const rule of rules) {
-        const jobData = {
-            automationId: rule.id,
-            clinicId,
-            event,
-            payload,
-            config: rule.config,
-            actionType: rule.actionType,
-            triggerEvent: rule.triggerEvent,
-            delayMinutes: rule.delayMinutes
-        }
-        const idempotencyKey = buildAutomationIdempotencyKey({ automationId: rule.id, clinicId, event, payload })
-
-        await automationQueue.add(buildAutomationJobName({ automationId: rule.id, clinicId, event, payload }), {
-            ...jobData,
-            idempotencyKey,
-        }, {
-            jobId: idempotencyKey,
-            delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
-            attempts: 3,
-            removeOnComplete: 100,
-            removeOnFail: 200,
-            backoff: { type: 'exponential', delay: 1000 },
+        const rules = await prisma.automation.findMany({
+            where: { clinicId, triggerEvent: event, isActive: true },
         })
 
-        const automationQueue = getAutomationQueue()
+        const queue = getAutomationQueue()
 
         for (const rule of rules) {
-            await automationQueue.add(rule.name, {
-                automationId: rule.id,
-                clinicId,
-                event,
-                payload,
-                config: rule.config,
-                actionType: rule.actionType,
-                triggerEvent: rule.triggerEvent,
-                delayMinutes: rule.delayMinutes
-            }, {
-                delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
-                attempts: 3,
-                removeOnComplete: 100,
-                removeOnFail: 200,
-                backoff: { type: 'exponential', delay: 1000 },
-            })
+            const idempotencyKey = buildAutomationIdempotencyKey({ automationId: rule.id, clinicId, event, payload })
+
+            await queue.add(
+                buildAutomationJobName({ automationId: rule.id, clinicId, event, payload }),
+                {
+                    automationId: rule.id,
+                    clinicId,
+                    event,
+                    payload,
+                    config: rule.config,
+                    actionType: rule.actionType,
+                    triggerEvent: rule.triggerEvent,
+                    delayMinutes: rule.delayMinutes,
+                    idempotencyKey,
+                },
+                {
+                    jobId: idempotencyKey,
+                    delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
+                    attempts: 3,
+                    removeOnComplete: 100,
+                    removeOnFail: 200,
+                    backoff: { type: 'exponential', delay: 1000 },
+                },
+            )
         }
 
         return { success: true, data: null }
     } catch (error: unknown) {
-        const message = error instanceof RedisUnavailableError
+        const message = isRedisUnavailableError(error)
             ? AUTOMATION_UNAVAILABLE_MESSAGE
             : getErrorMessage(error, AUTOMATION_UNAVAILABLE_MESSAGE)
 
@@ -186,7 +163,7 @@ export async function getAutomationLogs(): Promise<AutomationLog[]> {
             patient: { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
-        take: 50
+        take: 50,
     }) as unknown as AutomationLog[]
 }
 
@@ -196,7 +173,7 @@ export async function deleteAutomation(id: string): Promise<ActionResult<void>> 
 
         const clinicId = await getClinicId()
         await prisma.automation.delete({
-            where: { id, clinicId }
+            where: { id, clinicId },
         })
 
         revalidatePath('/automacoes')
