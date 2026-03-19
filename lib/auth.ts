@@ -151,7 +151,12 @@ export async function ensureUserProfile(session: Session) {
     const metadata = (session.user.user_metadata ?? {}) as UserMetadata
     const clinicId = metadata.clinic_id
 
-    if (!clinicId) return null
+    if (!clinicId) {
+        console.warn('[onboarding] perfil interno ausente e metadata sem clinic_id', {
+            userId: session.user.id,
+        })
+        return null
+    }
 
     const admin = createAdminClient()
     const { data: repairedUser, error: repairError } = await admin
@@ -167,6 +172,12 @@ export async function ensureUserProfile(session: Session) {
         .single()
 
     if (repairError || !repairedUser) {
+        console.error('[onboarding] falha ao reparar perfil interno', {
+            userId: session.user.id,
+            clinicId,
+            error: repairError?.message ?? 'empty result',
+            recommendation: 'Mover a criação/sincronização do perfil para trigger no banco ligada a auth.users.',
+        })
         return null
     }
 

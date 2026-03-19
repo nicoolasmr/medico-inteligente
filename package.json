@@ -12,8 +12,8 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "worker": "npm run worker:automation",
-    "worker:automation": "tsx workers/automation.worker.ts",
+    "worker": "tsx workers/automation.worker.ts",
+    "worker:automation": "npm run worker",
     "vercel-build": "npx prisma@6.4.1 generate && next build",
     "check:imports": "node scripts/check-no-alias-imports.mjs",
     "check:lockfile": "node scripts/check-lockfile-next-version.mjs"
