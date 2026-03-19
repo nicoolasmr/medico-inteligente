@@ -9,17 +9,26 @@ const prisma = {
         create: vi.fn(),
         findMany: vi.fn(),
     },
+    $transaction: vi.fn(async (operations: unknown[]) => operations),
 }
 const getClinicId = vi.fn()
 const revalidatePath = vi.fn()
 const queueAdd = vi.fn()
 const queueCtor = vi.fn()
 const sendWhatsApp = vi.fn()
+const redisGet = vi.fn()
+const redisSet = vi.fn()
 
 vi.mock('../lib/prisma', () => ({ prisma }))
 vi.mock('../lib/auth', () => ({ getClinicId }))
 vi.mock('next/cache', () => ({ revalidatePath }))
-vi.mock('../lib/redis', () => ({ redis: { status: 'mocked' } }))
+vi.mock('../lib/redis', () => ({
+    getRedis: vi.fn(() => ({ get: redisGet, set: redisSet, status: 'mocked-redis' })),
+    redis: { get: redisGet, set: redisSet },
+    RedisUnavailableError: class RedisUnavailableError extends Error {
+        code = 'REDIS_UNAVAILABLE'
+    },
+}))
 vi.mock('../lib/whatsapp', () => ({ sendWhatsApp }))
 vi.mock('bullmq', () => {
     class MockQueue {
@@ -56,30 +65,43 @@ describe('automation worker and actions stability', () => {
         vi.resetModules()
         vi.clearAllMocks()
         getClinicId.mockResolvedValue('clinic-123')
+        redisGet.mockResolvedValue(null)
+        redisSet.mockResolvedValue('OK')
+        sendWhatsApp.mockResolvedValue({ messageId: 'wamid-1', raw: { ok: true } })
     })
 
-    it('should skip queue dispatch when queue is unavailable', async () => {
+    it('should return a friendly error when queue is unavailable', async () => {
         const queueModule = await import('bullmq')
         ;(queueModule.Queue as any).mockImplementationOnce(function () { throw new Error('redis offline') })
-        prisma.automation.findMany.mockResolvedValue([{ id: 'auto-1', name: 'Rule', config: {}, actionType: 'whatsapp', triggerEvent: 'appointment_created', delayMinutes: 0 }])
+        prisma.automation.findMany.mockResolvedValue([{ id: 'auto-1', name: 'Rule', config: {}, actionType: 'whatsapp', triggerEvent: 'appointment_created', delayMinutes: 0, isActive: true }])
 
         const { triggerEvent } = await import('../app/(dashboard)/automacoes/actions')
 
-        await expect(triggerEvent('appointment_created', { patient: { id: 'patient-1' } })).resolves.toBeUndefined()
+        await expect(triggerEvent('appointment_created', { patient: { id: 'patient-1' } })).resolves.toEqual({
+            success: false,
+            error: 'redis offline',
+        })
         expect(queueAdd).not.toHaveBeenCalled()
     })
 
-    it('should enqueue automation jobs when queue is available', async () => {
-        prisma.automation.findMany.mockResolvedValue([{ id: 'auto-1', name: 'Rule', config: { message: 'Olá' }, actionType: 'whatsapp', triggerEvent: 'appointment_created', delayMinutes: 2 }])
+    it('should enqueue automation jobs with deterministic job ids when queue is available', async () => {
+        prisma.automation.findMany.mockResolvedValue([{ id: 'auto-1', name: 'Rule', config: { message: 'Olá' }, actionType: 'whatsapp', triggerEvent: 'appointment_created', delayMinutes: 2, isActive: true }])
 
         const { triggerEvent } = await import('../app/(dashboard)/automacoes/actions')
-        await triggerEvent('appointment_created', { patient: { id: 'patient-1', phone: '11999999999' } })
+        await expect(triggerEvent('appointment_created', { patient: { id: 'patient-1', phone: '11999999999' } })).resolves.toEqual({
+            success: true,
+            data: null,
+        })
 
         expect(queueCtor).toHaveBeenCalled()
-        expect(queueAdd).toHaveBeenCalledWith('Rule', expect.objectContaining({ automationId: 'auto-1', clinicId: 'clinic-123' }), expect.objectContaining({ delay: 120000 }))
+        expect(queueAdd).toHaveBeenCalledWith(
+            'appointment_created:auto-1:patient-1:no-time',
+            expect.objectContaining({ automationId: 'auto-1', clinicId: 'clinic-123', idempotencyKey: 'automation:auto-1:appointment_created:patient-1:no-time' }),
+            expect.objectContaining({ delay: 120000, jobId: 'automation:auto-1:appointment_created:patient-1:no-time' }),
+        )
     })
 
-    it('should fail when whatsapp payload misses patient phone and persist failure log', async () => {
+    it('should fail when whatsapp payload misses patient phone and persist structured failure log', async () => {
         const { processAutomationJob } = await import('../workers/automation.worker')
         const job = {
             id: 'job-1',
@@ -88,8 +110,10 @@ describe('automation worker and actions stability', () => {
             data: {
                 automationId: 'auto-1',
                 clinicId: 'clinic-123',
+                event: 'appointment_created',
                 triggerEvent: 'appointment_created',
                 actionType: 'whatsapp',
+                idempotencyKey: 'automation:auto-1:appointment_created:patient-1:no-time',
                 payload: { patient: { id: 'patient-1', name: 'Alice' } },
                 config: { message: 'Olá {patient_name}' },
             },
@@ -101,7 +125,12 @@ describe('automation worker and actions stability', () => {
             data: expect.objectContaining({
                 clinicId: 'clinic-123',
                 status: 'failed',
-                response: expect.objectContaining({ error: 'Automation payload is missing patient phone' }),
+                response: expect.objectContaining({
+                    error: 'Automation payload is missing patient phone',
+                    idempotencyKey: 'automation:auto-1:appointment_created:patient-1:no-time',
+                    attempt: 2,
+                    jobId: 'job-1',
+                }),
             }),
         }))
     })
@@ -115,8 +144,10 @@ describe('automation worker and actions stability', () => {
             data: {
                 automationId: 'auto-1',
                 clinicId: 'clinic-123',
+                event: 'appointment_created',
                 triggerEvent: 'appointment_created',
                 actionType: 'whatsapp',
+                idempotencyKey: 'automation:auto-1:appointment_created:patient-1:no-time',
                 payload: { patient: { id: 'patient-1', name: 'Alice', phone: '11999999999' } },
                 config: {},
             },
@@ -140,8 +171,11 @@ describe('automation worker and actions stability', () => {
             data: {
                 automationId: 'auto-1',
                 clinicId: 'clinic-123',
+                event: 'appointment_created',
                 triggerEvent: 'appointment_created',
                 actionType: 'whatsapp',
+                idempotencyKey: 'automation:auto-1:appointment_created:patient-1:09_30',
+                delayMinutes: 5,
                 payload: { patient: { id: 'patient-1', name: 'Alice', phone: '11999999999' }, time: '09:30' },
                 config: { message: 'Olá {patient_name}, até {time}' },
             },
@@ -151,7 +185,15 @@ describe('automation worker and actions stability', () => {
         expect(sendWhatsApp).toHaveBeenCalledWith({ to: '11999999999', message: 'Olá Alice, até 09:30' })
         expect(prisma.automation.update).toHaveBeenCalledWith({ where: { id: 'auto-1' }, data: { executions: { increment: 1 } } })
         expect(prisma.automationLog.create).toHaveBeenCalledWith(expect.objectContaining({
-            data: expect.objectContaining({ status: 'success', patientId: 'patient-1' }),
+            data: expect.objectContaining({
+                status: 'success',
+                patientId: 'patient-1',
+                response: expect.objectContaining({
+                    queue: 'automations',
+                    delayMinutes: 5,
+                    messagePreview: 'Olá Alice, até 09:30',
+                }),
+            }),
         }))
     })
 })
