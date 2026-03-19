@@ -2,9 +2,17 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Bell, CalendarCheck, ChevronRight, CircleDollarSign, Lightbulb, Target, TrendingUp, Users } from 'lucide-react'
-import { getDashboardData } from './actions'
-import { cn, formatCurrency, formatDateTime } from '../../../lib/utils'
+import {
+    Users,
+    CalendarCheck,
+    TrendingUp,
+    Target,
+    CircleDollarSign,
+    ChevronRight,
+    Lightbulb,
+    Bell
+} from 'lucide-react'
+import { cn, formatCurrency } from '../../../lib/utils'
 
 type DashboardData = Awaited<ReturnType<typeof getDashboardData>>
 
@@ -60,7 +68,10 @@ export default function DashboardPage() {
                             <div className={cn('p-2 rounded-sm bg-bg-elevated', kpi.color)}>
                                 <kpi.icon size={20} />
                             </div>
-                            <div className={cn('text-xs font-semibold flex items-center gap-1', (kpi.trend ?? 0) >= 0 ? 'text-brand-success' : 'text-brand-danger')}>
+                            <div className={cn(
+                                'text-xs font-semibold flex items-center gap-1',
+                                (kpi.trend ?? 0) >= 0 ? 'text-brand-success' : 'text-brand-danger'
+                            )}>
                                 {(kpi.trend ?? 0) >= 0 ? '+' : ''}{kpi.trend}%
                                 <TrendingUp size={12} className={(kpi.trend ?? 0) < 0 ? 'rotate-180' : ''} />
                             </div>
@@ -84,7 +95,8 @@ export default function DashboardPage() {
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
                                             'w-1 h-10 rounded-full',
-                                            alert.type === 'warning' ? 'bg-brand-warning' : alert.type === 'opportunity' ? 'bg-brand-primary' : 'bg-text-muted'
+                                            alert.type === 'warning' ? 'bg-brand-warning' :
+                                                alert.type === 'opportunity' ? 'bg-brand-primary' : 'bg-text-muted'
                                         )} />
                                         <div>
                                             <p className="text-sm font-medium text-text-primary">{alert.message}</p>
@@ -136,18 +148,22 @@ export default function DashboardPage() {
                             <span className="badge bg-brand-primary/20 text-brand-primary">AI Insight</span>
                         </div>
                         <h4 className="text-lg font-display text-text-primary mb-2">Oportunidade detectada</h4>
-                        <p className="text-sm text-text-secondary leading-relaxed mb-6">{data.primaryInsight}</p>
+                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+                            Você tem oportunidades em aberto no pipeline. Revisar pendências pode aumentar conversão e faturamento.
+                        </p>
                         <Link href="/pipeline" className="block w-full py-2 bg-brand-primary text-bg-app font-semibold rounded-sm hover:bg-brand-accent transition-all text-sm text-center">
                             Revisar Pipeline
                         </Link>
                     </div>
 
                     <div className="card p-6">
-                        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-2">Ticket médio</h3>
-                        <p className="text-2xl font-display text-text-primary">{formatCurrency(data.kpis.avgTicket.value)}</p>
-                        <p className={cn('text-xs mt-2 font-semibold', data.kpis.avgTicket.trend >= 0 ? 'text-brand-success' : 'text-brand-danger')}>
-                            {(data.kpis.avgTicket.trend >= 0 ? '+' : '') + data.kpis.avgTicket.trend}% vs. mês anterior
-                        </p>
+                        <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">Próximos Agendamentos</h3>
+                        <div className="space-y-4 text-xs text-text-muted">
+                            Esta seção será preenchida automaticamente com os próximos horários.
+                        </div>
+                        <Link href="/agenda" className="block w-full mt-4 text-xs font-semibold text-text-muted hover:text-brand-primary transition-colors py-2 border border-bg-border rounded-sm text-center">
+                            Ver agenda completa
+                        </Link>
                     </div>
                 </div>
             </div>

@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase/client'
 
 function LoginForm() {

@@ -1,12 +1,12 @@
 'use server'
 
-import { Queue } from 'bullmq'
-import { revalidatePath } from 'next/cache'
-import { getClinicId } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
-import { redis } from '../../../lib/redis'
+import { getClinicId } from '../../../lib/auth'
+import { revalidatePath } from 'next/cache'
 import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
-import type { ActionResult, Automation, AutomationLog } from '../../../types'
+import type { Automation, AutomationLog, ActionResult } from '../../../types'
+import { Queue } from 'bullmq'
+import { redis } from '../../../lib/redis'
 
 const automationQueue = new Queue('automations', { connection: redis })
 
