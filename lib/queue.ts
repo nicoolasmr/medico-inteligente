@@ -1,30 +1,22 @@
 import { Queue } from 'bullmq'
-import { redis as connection } from './redis'
+import { getRedis, isRedisConfigured } from './redis'
 
-/** Queue: appointment reminder jobs (24h before) */
-export const reminderQueue = new Queue('appointment-reminders', { connection })
+let automationQueue: Queue | null = null
 
-/** Queue: patient no-return detection (cron-driven) */
-export const noReturnQueue = new Queue('patient-no-return', { connection })
-
-/** Queue: outbound WhatsApp messages */
-export const whatsappQueue = new Queue('whatsapp-messages', { connection })
-
-export type AppointmentReminderJob = {
-    patientPhone: string
-    patientName: string
-    scheduledAt: string // ISO string
-    clinicName: string
-    clinicId: string
+export function isAutomationQueueAvailable() {
+    return isRedisConfigured()
 }
 
-export type NoReturnCheckJob = {
-    clinicId: string
-}
+export function getAutomationQueue() {
+    if (!isAutomationQueueAvailable()) {
+        throw new Error('Redis não configurado. As automações assíncronas estão temporariamente indisponíveis.')
+    }
 
-export type WhatsAppJob = {
-    to: string
-    message: string
-    patientId: string
-    clinicId: string
+    if (automationQueue) return automationQueue
+
+    automationQueue = new Queue('automations', {
+        connection: getRedis(),
+    })
+
+    return automationQueue
 }

@@ -1,7 +1,19 @@
 import IORedis from 'ioredis'
-import { requireEnv } from './env'
+import { getOptionalEnv, requireEnv } from './env'
 
-export const redis = new IORedis(requireEnv('REDIS_URL'), {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-})
+let redis: IORedis | null = null
+
+export function isRedisConfigured() {
+    return Boolean(getOptionalEnv('REDIS_URL'))
+}
+
+export function getRedis() {
+    if (redis) return redis
+
+    redis = new IORedis(requireEnv('REDIS_URL', { context: 'BullMQ / automations' }), {
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+    })
+
+    return redis
+}

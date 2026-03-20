@@ -1,21 +1,12 @@
 import '../globals.css'
 import { LogOut, UserCircle } from 'lucide-react'
 import { Toaster } from 'sonner'
-import { getClinicId } from '../../lib/auth'
-import { prisma } from '../../lib/prisma'
 
 type PortalLayoutProps = {
     children: React.ReactNode
 }
 
-export default async function PortalLayout({ children }: PortalLayoutProps) {
-    const clinicId = await getClinicId()
-    const fallbackPatient = await prisma.patient.findFirst({
-        where: { clinicId },
-        orderBy: [{ lastVisitAt: 'desc' }, { createdAt: 'desc' }],
-        select: { name: true, email: true },
-    })
-
+export default function PortalLayout({ children }: PortalLayoutProps) {
     return (
         <div className="font-sans bg-bg-app min-h-screen text-text-primary">
             <header className="h-[var(--header-height)] border-b border-bg-border bg-bg-surface sticky top-0 z-50">
@@ -30,8 +21,8 @@ export default async function PortalLayout({ children }: PortalLayoutProps) {
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3 pr-4 border-r border-bg-border">
                             <div className="text-right hidden sm:block">
-                                <p className="text-xs font-bold text-text-primary leading-none">{fallbackPatient?.name ?? 'Paciente da clínica'}</p>
-                                <p className="text-[10px] text-text-muted mt-0.5">{fallbackPatient?.email ?? 'Acesso autenticado'}</p>
+                                <p className="text-xs font-bold text-text-primary leading-none">Acesso seguro</p>
+                                <p className="text-[10px] text-text-muted mt-0.5">Link individual do paciente</p>
                             </div>
                             <UserCircle size={24} className="text-brand-primary" />
                         </div>

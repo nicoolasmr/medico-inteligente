@@ -1,14 +1,38 @@
 import { Calendar, ChevronRight, Clock, FileText, MessageCircle, Plus, ShieldCheck } from 'lucide-react'
-import { getClinicId } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
+import { getPortalPatientAccess } from '../../lib/portal-auth'
 import { formatDate, formatDateTime, formatTime } from '../../lib/utils'
 
-export default async function PatientPortalPage() {
-    const clinicId = await getClinicId()
-    const patient = await prisma.patient.findFirst({
-        where: { clinicId },
-        orderBy: [{ lastVisitAt: 'desc' }, { createdAt: 'desc' }],
-    })
+type PortalPageProps = {
+    searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
+
+function getSingleValue(value: string | string[] | undefined) {
+    return Array.isArray(value) ? value[0] : value
+}
+
+export default async function PatientPortalPage({ searchParams }: PortalPageProps) {
+    const resolvedSearchParams = searchParams ? await searchParams : undefined
+    const patientId = getSingleValue(resolvedSearchParams?.patient)
+    const token = getSingleValue(resolvedSearchParams?.token)
+    const access = await getPortalPatientAccess(patientId, token)
+
+    if (!access.ok) {
+        return (
+            <div className="space-y-6 py-8">
+                <section className="card p-8 border-brand-danger/30 bg-brand-danger/5 max-w-2xl">
+                    <h1 className="text-2xl font-display text-text-primary tracking-tight mb-3">Portal indisponível</h1>
+                    <p className="text-sm text-text-secondary leading-6">{access.reason}</p>
+                    <p className="text-xs text-text-muted mt-4">
+                        Solicite um novo link seguro diretamente com a clínica antes de tentar novamente.
+                    </p>
+                </section>
+            </div>
+        )
+    }
+
+    const { patient } = access
+    const clinicId = patient.clinicId
 
     const appointments = patient
         ? await prisma.appointment.findMany({

@@ -1,14 +1,11 @@
 'use server'
 
-import { Queue } from 'bullmq'
 import { revalidatePath } from 'next/cache'
 import { getClinicId } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
-import { redis } from '../../../lib/redis'
+import { getAutomationQueue, isAutomationQueueAvailable } from '../../../lib/queue'
 import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
 import type { ActionResult, Automation, AutomationLog } from '../../../types'
-
-const automationQueue = new Queue('automations', { connection: redis })
 
 type TriggerPayload = {
     patient?: {
@@ -74,7 +71,23 @@ export async function triggerEvent(event: string, payload: TriggerPayload) {
         where: { clinicId, triggerEvent: event, isActive: true }
     })
 
+    if (!isAutomationQueueAvailable()) {
+        console.warn(`[automacoes] Redis não configurado; evento "${event}" ignorado para clinic ${clinicId}.`)
+        return { queued: 0, skipped: rules.length }
+    }
+
+    const automationQueue = getAutomationQueue()
+    let queued = 0
+
     for (const rule of rules) {
+        const jobId = [
+            rule.id,
+            clinicId,
+            event,
+            payload.patient?.id ?? 'no-patient',
+            payload.time ?? 'no-time',
+        ].join(':')
+
         await automationQueue.add(rule.name, {
             automationId: rule.id,
             clinicId,
@@ -85,13 +98,17 @@ export async function triggerEvent(event: string, payload: TriggerPayload) {
             triggerEvent: rule.triggerEvent,
             delayMinutes: rule.delayMinutes
         }, {
+            jobId,
             delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
             attempts: 3,
             removeOnComplete: 100,
             removeOnFail: 200,
             backoff: { type: 'exponential', delay: 1000 },
         })
+        queued += 1
     }
+
+    return { queued, skipped: 0 }
 }
 
 export async function getAutomationLogs(): Promise<AutomationLog[]> {

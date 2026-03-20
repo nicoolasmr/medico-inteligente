@@ -1,6 +1,6 @@
 import { Job, Worker } from 'bullmq'
 import { prisma } from '../lib/prisma'
-import { redis } from '../lib/redis'
+import { getRedis } from '../lib/redis'
 import { sendWhatsApp } from '../lib/whatsapp'
 
 type WorkerPayload = {
@@ -103,7 +103,7 @@ const worker = new Worker<WorkerPayload>('automations', async job => {
 
         throw error
     }
-}, { connection: redis })
+}, { connection: getRedis() })
 
 worker.on('completed', job => {
     console.log(`[Worker] Job ${job.id} completed`)
