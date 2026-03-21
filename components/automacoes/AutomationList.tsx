@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import type { Automation } from '../../types'
-import { cn } from '../../lib/utils'
+import { cn, timeAgo } from '../../lib/utils'
 import { toggleAutomation, deleteAutomation } from '../../app/(dashboard)/automacoes/actions'
 import { toast } from 'sonner'
 import {

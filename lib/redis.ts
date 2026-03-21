@@ -1,59 +1,19 @@
 import IORedis from 'ioredis'
-import { getOptionalEnv } from './env'
+import { getOptionalEnv, requireEnv } from './env'
 
-export class RedisUnavailableError extends Error {
-    readonly code = 'REDIS_UNAVAILABLE'
+let redis: IORedis | null = null
 
-    constructor(message = 'Automações indisponíveis: configure REDIS_URL para habilitar BullMQ/Redis.') {
-        super(message)
-        this.name = 'RedisUnavailableError'
-    }
-}
-
-let redisInstance: IORedis | null = null
-
-export function getRedisUrl(): string {
-    const redisUrl = getOptionalEnv('REDIS_URL')
-
-    if (!redisUrl) {
-        throw new RedisUnavailableError()
-    }
-
-    return redisUrl
-}
-
-export function isRedisConfigured(): boolean {
+export function isRedisConfigured() {
     return Boolean(getOptionalEnv('REDIS_URL'))
 }
 
-export function createRedisClient(redisUrl = getRedisUrl()): IORedis {
-    return new IORedis(redisUrl, {
+export function getRedis() {
+    if (redis) return redis
+
+    redis = new IORedis(requireEnv('REDIS_URL', { context: 'BullMQ / automations' }), {
         maxRetriesPerRequest: null,
         enableReadyCheck: false,
     })
-}
 
-export function getRedis(): IORedis {
-    if (redisInstance) {
-        return redisInstance
-    }
-
-    redisInstance = createRedisClient()
-
-    return redisInstance
-}
-
-export function getRedisIfAvailable(): IORedis | null {
-    if (!isRedisConfigured()) {
-        return null
-    }
-
-    return getRedis()
-}
-
-export function resetRedisForTests() {
-    if (redisInstance) {
-        redisInstance.disconnect()
-        redisInstance = null
-    }
+    return redis
 }

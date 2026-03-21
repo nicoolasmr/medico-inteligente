@@ -16,7 +16,7 @@ import { Input } from '../ui/input'
 import { createAutomationSchema, type CreateAutomationInput } from '../../lib/validations/automation'
 import { createAutomation } from '../../app/(dashboard)/automacoes/actions'
 import { toast } from 'sonner'
-import { AlertTriangle, Zap, MessageSquare, Clock, Shield } from 'lucide-react'
+import { Zap, MessageSquare, Clock, Shield } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 interface CreateAutomationDialogProps {

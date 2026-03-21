@@ -1,17 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPatient } from '../app/(dashboard)/patients/actions'
 import { createAppointment } from '../app/(dashboard)/agenda/actions'
 import { prisma } from '../lib/prisma'
 import { getClinicId } from '../lib/auth'
-
-const { redirect, headersMock, cookiesMock, apiRatelimit, createServerClient, getSession } = vi.hoisted(() => ({
-    redirect: vi.fn(() => { throw new Error('Redirect') }),
-    headersMock: vi.fn(),
-    cookiesMock: vi.fn(),
-    apiRatelimit: { limit: vi.fn() },
-    createServerClient: vi.fn(),
-    getSession: vi.fn(),
-}))
 
 vi.mock('../lib/prisma', () => ({
     prisma: {

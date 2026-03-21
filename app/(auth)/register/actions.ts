@@ -3,13 +3,6 @@
 import { createAdminClient } from '../../../lib/supabase/admin'
 import { slugify } from '../../../lib/utils'
 
-const ONBOARDING_ERRORS = {
-    EMAIL_IN_USE: 'Não foi possível concluir o cadastro: este e-mail já está em uso. Se precisar de ajuda, informe o código ONB-REG-EMAIL ao suporte.',
-    CLINIC_SLUG_CONFLICT: 'Não foi possível concluir o cadastro: o identificador da clínica já existe. Revise o nome informado e, se o problema continuar, informe o código ONB-REG-SLUG ao suporte.',
-    ENVIRONMENT: 'Não foi possível concluir o cadastro porque a configuração de autenticação está incompleta. Informe o código ONB-REG-ENV ao suporte.',
-    DEFAULT: 'Não foi possível concluir o cadastro agora. Tente novamente em instantes. Se o erro persistir, informe o código ONB-REG-UNEXPECTED ao suporte.',
-} as const
-
 type RegisterClinicInput = {
     userName: string
     clinicName: string
@@ -44,18 +37,18 @@ function getDefaultAutomations(clinicId: string) {
 
 function normalizeRegistrationError(message: string) {
     if (message.includes('already been registered') || message.includes('User already registered')) {
-        return ONBOARDING_ERRORS.EMAIL_IN_USE
+        return 'Este e-mail já está cadastrado. Tente fazer login.'
     }
 
     if (message.includes('duplicate key') || message.includes('clinics_slug_key')) {
-        return ONBOARDING_ERRORS.CLINIC_SLUG_CONFLICT
+        return 'Já existe uma clínica com esse identificador. Tente outro nome.'
     }
 
     if (message.includes('Missing required environment variable')) {
-        return ONBOARDING_ERRORS.ENVIRONMENT
+        return 'Configuração do Supabase incompleta no ambiente. Revise as variáveis da Vercel.'
     }
 
-    return ONBOARDING_ERRORS.DEFAULT
+    return message
 }
 
 async function generateClinicSlug(clinicName: string) {
@@ -74,31 +67,6 @@ async function generateClinicSlug(clinicName: string) {
     }
 
     throw new Error('Não foi possível gerar um identificador único para a clínica.')
-}
-
-async function rollbackRegistration(supabaseAdmin: ReturnType<typeof createAdminClient>, createdClinicId: string | null, createdUserId: string | null) {
-    const rollbackSteps: Promise<unknown>[] = []
-
-    if (createdClinicId) {
-        rollbackSteps.push(supabaseAdmin.from('automations').delete().eq('clinic_id', createdClinicId))
-        rollbackSteps.push(supabaseAdmin.from('users').delete().eq('clinic_id', createdClinicId))
-        rollbackSteps.push(supabaseAdmin.from('clinics').delete().eq('id', createdClinicId))
-    }
-
-    if (createdUserId) {
-        rollbackSteps.push(supabaseAdmin.auth.admin.deleteUser(createdUserId))
-    }
-
-    const rollbackResults = await Promise.allSettled(rollbackSteps)
-    const failedRollback = rollbackResults.filter((result) => result.status === 'rejected')
-
-    if (failedRollback.length > 0) {
-        console.error('[onboarding] rollback incompleto após falha no cadastro', {
-            createdClinicId,
-            createdUserId,
-            failedSteps: failedRollback.length,
-        })
-    }
 }
 
 export async function registerClinic(data: RegisterClinicInput): Promise<RegisterClinicResult> {
@@ -160,7 +128,7 @@ export async function registerClinic(data: RegisterClinicInput): Promise<Registe
         if (userError) throw new Error(userError.message)
 
         if (!createdClinicId) {
-            throw new Error('Falha ao criar clínica')
+            throw new Error('Falha ao associar a clínica criada ao usuário.')
         }
 
         const { error: automationError } = await supabaseAdmin
@@ -171,12 +139,17 @@ export async function registerClinic(data: RegisterClinicInput): Promise<Registe
 
         return { success: true, redirectTo: '/login?registered=true' }
     } catch (error) {
-        await rollbackRegistration(supabaseAdmin, createdClinicId, createdUserId)
+        if (createdClinicId) {
+            await supabaseAdmin.from('automations').delete().eq('clinic_id', createdClinicId)
+            await supabaseAdmin.from('users').delete().eq('clinic_id', createdClinicId)
+            await supabaseAdmin.from('clinics').delete().eq('id', createdClinicId)
+        }
 
-        // Observação de consistência: o banco já garante parte do cleanup com FKs e ON DELETE CASCADE.
-        // Um próximo passo é mover também a criação/reparo do perfil `public.users` para trigger em `auth.users`,
-        // reduzindo o risco de divergência entre metadata do Auth e perfil interno.
-        const rawMessage = error instanceof Error ? error.message : ONBOARDING_ERRORS.DEFAULT
+        if (createdUserId) {
+            await supabaseAdmin.auth.admin.deleteUser(createdUserId)
+        }
+
+        const rawMessage = error instanceof Error ? error.message : 'Não foi possível criar sua conta agora.'
         return { success: false, error: normalizeRegistrationError(rawMessage) }
     }
 }

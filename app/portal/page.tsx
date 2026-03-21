@@ -1,51 +1,70 @@
 import { Calendar, ChevronRight, Clock, FileText, MessageCircle, Plus, ShieldCheck } from 'lucide-react'
 import { prisma } from '../../lib/prisma'
+import { getPortalPatientAccess } from '../../lib/portal-auth'
 import { formatDate, formatDateTime, formatTime } from '../../lib/utils'
-import { getPortalIdentity } from '../../lib/portal-auth'
 
-export default async function PatientPortalPage() {
-    const { clinicId, patientId } = await getPortalIdentity()
-    const patient = await prisma.patient.findUnique({
-        where: { id: patientId },
-    })
+type PortalPageProps = {
+    searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
 
-    if (!patient || patient.clinicId !== clinicId) {
-        throw new Error('Portal patient not found for current identity')
-    }
+function getSingleValue(value: string | string[] | undefined) {
+    return Array.isArray(value) ? value[0] : value
+}
 
-    const appointments = await prisma.appointment.findMany({
-        where: {
-            patientId,
-            clinicId,
-            scheduledAt: { gte: new Date() },
-        },
-        include: { doctor: { select: { name: true } } },
-        orderBy: { scheduledAt: 'asc' },
-        take: 3,
-    })
+export default async function PatientPortalPage({ searchParams }: PortalPageProps) {
+    const resolvedSearchParams = searchParams ? await searchParams : undefined
+    const patientId = getSingleValue(resolvedSearchParams?.patient)
+    const token = getSingleValue(resolvedSearchParams?.token)
+    const access = await getPortalPatientAccess(patientId, token)
 
-    const documents = await prisma.payment.findMany({
-        where: {
-            patientId,
-            clinicId,
-            OR: [{ receiptUrl: { not: null } }, { description: { not: null } }],
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 4,
-    })
-
-    if (!patient) {
+    if (!access.ok) {
         return (
-            <div className="card p-6 text-sm text-text-secondary">Paciente não encontrado para este acesso.</div>
+            <div className="space-y-6 py-8">
+                <section className="card p-8 border-brand-danger/30 bg-brand-danger/5 max-w-2xl">
+                    <h1 className="text-2xl font-display text-text-primary tracking-tight mb-3">Portal indisponível</h1>
+                    <p className="text-sm text-text-secondary leading-6">{access.reason}</p>
+                    <p className="text-xs text-text-muted mt-4">
+                        Solicite um novo link seguro diretamente com a clínica antes de tentar novamente.
+                    </p>
+                </section>
+            </div>
         )
     }
+
+    const { patient } = access
+    const clinicId = patient.clinicId
+
+    const appointments = patient
+        ? await prisma.appointment.findMany({
+            where: {
+                clinicId,
+                patientId: patient.id,
+                scheduledAt: { gte: new Date() },
+            },
+            include: { doctor: { select: { name: true } } },
+            orderBy: { scheduledAt: 'asc' },
+            take: 3,
+        })
+        : []
+
+    const documents = patient
+        ? await prisma.payment.findMany({
+            where: {
+                clinicId,
+                patientId: patient.id,
+                OR: [{ receiptUrl: { not: null } }, { description: { not: null } }],
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 4,
+        })
+        : []
 
     const nextAppointment = appointments[0] ?? null
 
     return (
         <div className="space-y-10 py-4">
             <section>
-                <h1 className="text-3xl font-display text-text-primary tracking-tight mb-2">Olá, {patient.name.split(' ')[0] ?? 'Paciente'}!</h1>
+                <h1 className="text-3xl font-display text-text-primary tracking-tight mb-2">Olá, {patient?.name?.split(' ')[0] ?? 'Paciente'}!</h1>
                 <p className="text-text-secondary text-sm">Bem-vindo ao seu espaço de saúde digital com dados atualizados da clínica.</p>
             </section>
 
@@ -132,7 +151,7 @@ export default async function PatientPortalPage() {
                         </div>
                         <div>
                             <h4 className="text-sm font-bold text-text-primary uppercase tracking-tight">Suporte via WhatsApp</h4>
-                            <p className="text-[10px] text-text-secondary leading-tight mt-1">{patient.phone ? `Contato principal registrado: ${patient.phone}` : 'Telefone do paciente ainda não cadastrado.'}</p>
+                            <p className="text-[10px] text-text-secondary leading-tight mt-1">{patient?.phone ? `Contato principal registrado: ${patient.phone}` : 'Telefone do paciente ainda não cadastrado.'}</p>
                         </div>
                     </div>
                 </section>

@@ -32,17 +32,24 @@ function isRateLimitedPath(pathname: string) {
     return matchesPrefix(pathname, RATE_LIMITED_PREFIXES)
 }
 
+function getRequestIdentifier(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (!forwardedFor) return '127.0.0.1'
+
+    return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
+}
+
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
     let response = NextResponse.next({ request })
 
-    if (isRateLimitedPath(pathname)) {
+    if (pathname.startsWith('/api') || PROTECTED_PREFIXES.some(p => pathname.startsWith(p))) {
         try {
             const identifier = getRequestIdentifier(request)
             const { success } = await apiRatelimit.limit(identifier)
 
             if (!success) {
-                return new Response('Too Many Requests', { status: 429 })
+                return new NextResponse('Too Many Requests', { status: 429 })
             }
         } catch (error) {
             console.error('[middleware] Rate limit check failed; continuing request.', error)
@@ -89,17 +96,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
     matcher: [
         '/api/:path*',
-        '/portal/:path*',
-        '/dashboard/:path*',
-        '/patients/:path*',
-        '/agenda/:path*',
-        '/pipeline/:path*',
-        '/financeiro/:path*',
-        '/automacoes/:path*',
-        '/insights/:path*',
-        '/configuracoes/:path*',
-        '/login',
-        '/register',
-        '/forgot-password',
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp)).*)',
     ],
 }

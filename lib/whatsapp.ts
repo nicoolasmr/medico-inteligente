@@ -7,12 +7,6 @@ export type WhatsAppMessage = {
     message: string
 }
 
-export type WhatsAppDeliveryResult = {
-    messageId?: string
-    contactWaId?: string
-    raw: unknown
-}
-
 type IncomingWhatsAppMessage = {
     from: string
     text: string | undefined
@@ -23,7 +17,7 @@ type IncomingWhatsAppMessage = {
 /**
  * Send a text message via WhatsApp Cloud API (Meta Graph API v19)
  */
-export async function sendWhatsApp({ to, message }: WhatsAppMessage): Promise<WhatsAppDeliveryResult> {
+export async function sendWhatsApp({ to, message }: WhatsAppMessage): Promise<void> {
     const phoneId = requireEnv('WHATSAPP_PHONE_NUMBER_ID', { context: 'WhatsApp delivery' })
     const token = requireEnv('WHATSAPP_TOKEN', { context: 'WhatsApp delivery' })
 

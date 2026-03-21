@@ -1,4 +1,22 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import { getCurrentUser } from '../lib/auth'
+import { redirect } from 'next/navigation'
+import { createClient } from '../lib/supabase/server'
+
+vi.mock('../lib/supabase/server', () => ({
+    createClient: vi.fn(),
+}))
+
+vi.mock('next/navigation', () => ({
+    redirect: vi.fn(() => { throw new Error('Redirect') }),
+}))
+
+describe('Auth Logic (Tenant Isolation)', () => {
+    it('should redirect to login if no session exists', async () => {
+        const mockSupabase = {
+            auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }) },
+        }
+            ; (createClient as any).mockResolvedValue(mockSupabase)
 
 const redirect = vi.fn(() => { throw new Error('NEXT_REDIRECT') })
 const getSession = vi.fn()
