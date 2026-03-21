@@ -36,9 +36,21 @@ export async function sendWhatsApp({ to, message }: WhatsAppMessage): Promise<vo
         }),
     })
 
+    const body = await res.json()
+
     if (!res.ok) {
-        const error = await res.json()
-        throw new Error(`WhatsApp API error: ${JSON.stringify(error)}`)
+        throw new Error(`WhatsApp API error: ${JSON.stringify(body)}`)
+    }
+
+    const response = body as {
+        contacts?: Array<{ wa_id?: string }>
+        messages?: Array<{ id?: string }>
+    }
+
+    return {
+        messageId: response.messages?.[0]?.id,
+        contactWaId: response.contacts?.[0]?.wa_id,
+        raw: body,
     }
 }
 
