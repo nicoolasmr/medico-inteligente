@@ -25,12 +25,14 @@ export async function getAutomations(): Promise<Automation[]> {
     const clinicId = await getClinicId()
     return prisma.automation.findMany({
         where: { clinicId },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
     }) as unknown as Automation[]
 }
 
 export async function createAutomation(data: CreateAutomationInput): Promise<ActionResult<Automation>> {
     try {
+        assertAutomationAvailable()
+
         const clinicId = await getClinicId()
         const validatedData = createAutomationSchema.parse(data)
 
@@ -38,8 +40,8 @@ export async function createAutomation(data: CreateAutomationInput): Promise<Act
             data: {
                 ...validatedData,
                 clinicId,
-                isActive: true
-            }
+                isActive: true,
+            },
         })
 
         revalidatePath('/automacoes')
@@ -51,10 +53,12 @@ export async function createAutomation(data: CreateAutomationInput): Promise<Act
 
 export async function toggleAutomation(id: string, active: boolean): Promise<ActionResult<Automation>> {
     try {
+        assertAutomationAvailable()
+
         const clinicId = await getClinicId()
         const automation = await prisma.automation.update({
             where: { id, clinicId },
-            data: { isActive: active }
+            data: { isActive: active },
         })
 
         revalidatePath('/automacoes')
@@ -120,15 +124,17 @@ export async function getAutomationLogs(): Promise<AutomationLog[]> {
             patient: { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
-        take: 50
+        take: 50,
     }) as unknown as AutomationLog[]
 }
 
 export async function deleteAutomation(id: string): Promise<ActionResult<void>> {
     try {
+        assertAutomationAvailable()
+
         const clinicId = await getClinicId()
         await prisma.automation.delete({
-            where: { id, clinicId }
+            where: { id, clinicId },
         })
 
         revalidatePath('/automacoes')
