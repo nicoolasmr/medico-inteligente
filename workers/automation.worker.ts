@@ -1,51 +1,109 @@
-import { Worker } from 'bullmq'
-import { redis } from '../lib/redis'
+import { Job, Worker } from 'bullmq'
 import { prisma } from '../lib/prisma'
+import { getRedis } from '../lib/redis'
 import { sendWhatsApp } from '../lib/whatsapp'
 
-const worker = new Worker('automations', async job => {
+type WorkerPayload = {
+    automationId: string
+    clinicId: string
+    triggerEvent: string
+    actionType: string
+    payload?: {
+        patient?: {
+            id?: string
+            name?: string
+            phone?: string | null
+        }
+        time?: string
+        [key: string]: unknown
+    }
+    config?: Record<string, unknown>
+}
+
+function interpolateTemplate(template: string, payload: WorkerPayload['payload']) {
+    return template
+        .replace('{patient_name}', payload?.patient?.name || 'Paciente')
+        .replace('{time}', payload?.time || '')
+}
+
+async function persistLog(job: Job<WorkerPayload>, data: { status: 'success' | 'failed'; response: Record<string, unknown> }) {
+    const { automationId, clinicId, actionType, triggerEvent, payload } = job.data
+
+    await prisma.automationLog.create({
+        data: {
+            clinicId,
+            automationId,
+            patientId: payload?.patient?.id,
+            actionType,
+            triggerEvent,
+            status: data.status,
+            response: {
+                jobId: job.id,
+                queue: job.queueName,
+                attemptsMade: job.attemptsMade,
+                ...data.response,
+            },
+        },
+    })
+}
+
+const worker = new Worker<WorkerPayload>('automations', async job => {
     const { automationId, clinicId, payload, config, actionType } = job.data
 
     console.log(`[Worker] Executing automation ${automationId} for clinic ${clinicId}`)
 
     try {
         if (actionType === 'whatsapp') {
-            const { message } = config as any
-            // Simple template replacement
-            const formattedMessage = message
-                .replace('{patient_name}', payload?.patient?.name || 'Paciente')
-                .replace('{time}', payload?.time || '')
+            const message = typeof config?.message === 'string' ? config.message : ''
+            if (!message) {
+                throw new Error('Automation config is missing a WhatsApp message template')
+            }
 
-            await sendWhatsApp({ to: payload?.patient?.phone, message: formattedMessage })
+            if (!payload?.patient?.phone) {
+                throw new Error('Automation payload is missing patient phone')
+            }
+
+            const formattedMessage = interpolateTemplate(message, payload)
+            await sendWhatsApp({ to: payload.patient.phone, message: formattedMessage })
+
+            await prisma.automation.update({
+                where: { id: automationId },
+                data: { executions: { increment: 1 } },
+            })
+
+            await persistLog(job, {
+                status: 'success',
+                response: {
+                    action: actionType,
+                    destination: payload.patient.phone,
+                    patientName: payload.patient.name ?? 'Paciente',
+                },
+            })
+            return
         }
 
-        // Log success
-        await prisma.automationLog.create({
-            data: {
-                clinicId,
-                automationId,
-                actionType,
-                triggerEvent: (config as any).triggerEvent || 'system',
-                status: 'success',
-                response: { jobId: job.id, action: actionType }
-            }
+        await persistLog(job, {
+            status: 'success',
+            response: {
+                action: actionType,
+                detail: 'No-op action executed successfully',
+            },
         })
-
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Erro desconhecido na automação'
         console.error(`[Worker] Error in job ${job.id}:`, error)
 
-        await prisma.automationLog.create({
-            data: {
-                clinicId,
-                automationId,
-                actionType,
-                triggerEvent: (config as any).triggerEvent || 'system',
-                status: 'failed',
-                response: { error: error.message }
-            }
+        await persistLog(job, {
+            status: 'failed',
+            response: {
+                action: actionType,
+                error: message,
+            },
         })
+
+        throw error
     }
-}, { connection: redis })
+}, { connection: getRedis() })
 
 worker.on('completed', job => {
     console.log(`[Worker] Job ${job.id} completed`)

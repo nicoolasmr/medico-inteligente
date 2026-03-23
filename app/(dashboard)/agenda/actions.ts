@@ -1,10 +1,10 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
-import { getClinicId } from '@/lib/auth'
+import { prisma } from '../../../lib/prisma'
+import { getClinicId } from '../../../lib/auth'
 import { revalidatePath } from 'next/cache'
-import { createAppointmentSchema, updateAppointmentSchema, type CreateAppointmentInput, type UpdateAppointmentInput } from '@/lib/validations/appointment'
-import type { Appointment, ActionResult } from '@/types'
+import { createAppointmentSchema, updateAppointmentSchema, type CreateAppointmentInput, type UpdateAppointmentInput } from '../../../lib/validations/appointment'
+import type { Appointment, ActionResult } from '../../../types'
 import { startOfDay, endOfDay } from 'date-fns'
 
 /**
