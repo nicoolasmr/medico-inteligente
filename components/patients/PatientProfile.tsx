@@ -1,14 +1,24 @@
 'use client'
 
 import { Patient } from '../../types'
-import { User, Phone, Mail, FileText, Calendar, MapPin, Tag } from 'lucide-react'
+import { User, Phone, Mail, FileText, Calendar, MapPin, Tag, Link as LinkIcon, MessageCircle } from 'lucide-react'
 import { formatDate, getInitials } from '../../lib/utils'
 
 interface PatientProfileProps {
     patient: Patient
+    onGeneratePortalLink?: () => void
+    onSendPortalLink?: () => void
+    portalLinkLoading?: boolean
+    portalWhatsAppLoading?: boolean
 }
 
-export function PatientProfile({ patient }: PatientProfileProps) {
+export function PatientProfile({
+    patient,
+    onGeneratePortalLink,
+    onSendPortalLink,
+    portalLinkLoading = false,
+    portalWhatsAppLoading = false,
+}: PatientProfileProps) {
     return (
         <div className="card-elevated p-8">
             <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -61,6 +71,24 @@ export function PatientProfile({ patient }: PatientProfileProps) {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button className="px-6 py-2 bg-brand-primary text-bg-app font-semibold rounded-sm hover:bg-brand-accent transition-all text-sm">
                         Novo Agendamento
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onGeneratePortalLink}
+                        disabled={!onGeneratePortalLink || portalLinkLoading}
+                        className="px-6 py-2 bg-bg-app border border-brand-primary/30 text-brand-primary rounded-sm hover:bg-brand-primary/10 transition-all text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        <LinkIcon size={14} />
+                        {portalLinkLoading ? 'Gerando link...' : 'Copiar Link do Portal'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onSendPortalLink}
+                        disabled={!onSendPortalLink || portalWhatsAppLoading}
+                        className="px-6 py-2 bg-green-500/10 border border-green-500/30 text-green-400 rounded-sm hover:bg-green-500/15 transition-all text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        <MessageCircle size={14} />
+                        {portalWhatsAppLoading ? 'Enviando...' : 'Enviar Portal via WhatsApp'}
                     </button>
                     <button className="px-6 py-2 bg-bg-surface border border-bg-border text-text-primary rounded-sm hover:bg-bg-hover transition-all text-sm font-medium">
                         Editar Dados

@@ -39,6 +39,13 @@ function getRequestIdentifier(request: NextRequest) {
     return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
 }
 
+function getRequestIdentifier(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (!forwardedFor) return '127.0.0.1'
+
+    return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
+}
+
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
     let response = NextResponse.next({ request })

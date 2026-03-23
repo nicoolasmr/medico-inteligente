@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto'
-import { requireEnv } from './env'
+import { getOptionalEnv, requireEnv } from './env'
 
 const PORTAL_TOKEN_VERSION = 'v1'
 
@@ -15,6 +15,26 @@ function signPayload(payload: string) {
 
 export function createPatientPortalToken(patientId: string) {
     return signPayload(buildPayload(patientId))
+}
+
+export function getPatientPortalPath(patientId: string) {
+    const token = createPatientPortalToken(patientId)
+    const params = new URLSearchParams({
+        patient: patientId,
+        token,
+    })
+
+    return `/portal?${params.toString()}`
+}
+
+export function getPatientPortalAbsoluteUrl(patientId: string) {
+    const baseUrl = getOptionalEnv('APP_URL') ?? getOptionalEnv('NEXT_PUBLIC_APP_URL')
+
+    if (!baseUrl) {
+        throw new Error('Defina APP_URL ou NEXT_PUBLIC_APP_URL para compartilhar links absolutos do portal.')
+    }
+
+    return `${baseUrl.replace(/\/$/, '')}${getPatientPortalPath(patientId)}`
 }
 
 export function verifyPatientPortalToken(patientId: string, token: string) {
