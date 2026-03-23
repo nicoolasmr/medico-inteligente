@@ -83,13 +83,7 @@ type AutomationLogStatus = 'success' | 'failed' | 'skipped'
             return
         }
 
-        await persistLog(job, {
-            status: 'success',
-            response: {
-                action: actionType,
-                detail: 'No-op action executed successfully',
-            },
-        })
+        throw new Error(`Unsupported automation action type: ${actionType}`)
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Erro desconhecido na automação'
         console.error(`[Worker] Error in job ${job.id}:`, error)

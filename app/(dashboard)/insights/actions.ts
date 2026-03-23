@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma'
 import { getClinicId } from '../../../lib/auth'
 import { revalidatePath } from 'next/cache'
 import { openai } from '../../../lib/openai'
+import { aiRatelimit } from '../../../lib/ratelimit'
 import type { AiInsight, ActionResult } from '../../../types'
 
 /**
@@ -23,6 +24,11 @@ export async function getAiInsights(): Promise<AiInsight[]> {
 export async function generateGrowthInsights(): Promise<ActionResult<AiInsight>> {
     try {
         const clinicId = await getClinicId()
+        const { success: allowed } = await aiRatelimit.limit(`insights:${clinicId}`)
+
+        if (!allowed) {
+            return { success: false, error: 'Limite de análises por IA atingido. Tente novamente mais tarde.' }
+        }
 
         // Fetch clinic data for context
         const [patientCount, apptCount, totalRevenue, pendingRevenue] = await Promise.all([

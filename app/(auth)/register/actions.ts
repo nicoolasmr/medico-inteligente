@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '../../../lib/supabase/admin'
+import { authRatelimit } from '../../../lib/ratelimit'
 import { slugify } from '../../../lib/utils'
 
 type RegisterClinicInput = {
@@ -70,7 +71,15 @@ async function generateClinicSlug(clinicName: string) {
 }
 
 export async function registerClinic(data: RegisterClinicInput): Promise<RegisterClinicResult> {
+    const rateLimitKey = `register:${data.email.trim().toLowerCase()}`
+    const { success: allowed } = await authRatelimit.limit(rateLimitKey)
+
+    if (!allowed) {
+        return { success: false, error: 'Muitas tentativas de cadastro. Aguarde um minuto e tente novamente.' }
+    }
+
     const supabaseAdmin = createAdminClient()
+
     let createdUserId: string | null = null
     let createdClinicId: string | null = null
 

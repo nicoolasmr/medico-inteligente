@@ -16,8 +16,7 @@ import { Input } from '../ui/input'
 import { createAutomationSchema, type CreateAutomationInput } from '../../lib/validations/automation'
 import { createAutomation } from '../../app/(dashboard)/automacoes/actions'
 import { toast } from 'sonner'
-import { Zap, MessageSquare, Clock, Shield } from 'lucide-react'
-import { cn } from '../../lib/utils'
+import { Zap, MessageSquare, Clock } from 'lucide-react'
 
 interface CreateAutomationDialogProps {
     open: boolean
@@ -38,8 +37,6 @@ export function CreateAutomationDialog({
         register,
         handleSubmit,
         reset,
-        watch,
-        setValue,
         formState: { errors }
     } = useForm<CreateAutomationInput>({
         resolver: zodResolver(createAutomationSchema),
@@ -48,11 +45,9 @@ export function CreateAutomationDialog({
             triggerEvent: 'appointment_created',
             actionType: 'whatsapp',
             delayMinutes: 0,
-            config: { template: 'Lembrete de Consulta' },
+            config: { message: 'Olá {patient_name}! Lembrando da sua consulta em {time}.' },
         }
     })
-
-    const actionType = watch('actionType')
 
     async function onSubmit(data: CreateAutomationInput) {
         if (disabled) {
@@ -70,7 +65,7 @@ export function CreateAutomationDialog({
             } else {
                 toast.error(res.error)
             }
-        } catch (_err) {
+        } catch {
             toast.error('Erro ao conectar com servidor')
         } finally {
             setLoading(false)
@@ -86,7 +81,7 @@ export function CreateAutomationDialog({
                         Criar Novo Fluxo
                     </DialogTitle>
                     <DialogDescription>
-                        Configure um gatilho automático para sua clínica.
+                        Configure um gatilho automático para sua clínica. Atualmente, apenas ações via WhatsApp estão habilitadas em produção.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -117,40 +112,41 @@ export function CreateAutomationDialog({
                                 disabled={disabled || loading}
                             >
                                 <option value="appointment_created">Consulta Criada</option>
+                                <option value="appointment_completed">Consulta Concluída</option>
                                 <option value="treatment_approved">Tratamento Aprovado</option>
                                 <option value="payment_overdue">Cobrança Vencida</option>
                                 <option value="patient_birthday">Aniversário do Paciente</option>
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">Ação</label>
-                            <div className="flex bg-bg-elevated border border-bg-border rounded-sm p-1 gap-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setValue('actionType', 'whatsapp')}
-                                    disabled={disabled || loading}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-1.5 py-1 text-[10px] font-bold uppercase tracking-tight transition-all rounded-xs disabled:cursor-not-allowed disabled:opacity-50",
-                                        actionType === 'whatsapp' ? "bg-brand-primary text-bg-app" : "text-text-muted hover:text-text-primary"
-                                    )}
-                                >
-                                    <MessageSquare size={12} />
-                                    WhatsApp
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setValue('actionType', 'email')}
-                                    disabled={disabled || loading}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-1.5 py-1 text-[10px] font-bold uppercase tracking-tight transition-all rounded-xs disabled:cursor-not-allowed disabled:opacity-50",
-                                        actionType === 'email' ? "bg-brand-primary text-bg-app" : "text-text-muted hover:text-text-primary"
-                                    )}
-                                >
-                                    <Shield size={12} />
-                                    Email
-                                </button>
+                            <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">Canal</label>
+                            <div className="flex items-center gap-2 rounded-sm border border-brand-primary/20 bg-brand-primary/5 px-3 py-2 text-sm text-brand-primary">
+                                <MessageSquare size={14} />
+                                WhatsApp ativo
                             </div>
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                            <MessageSquare size={12} />
+                            Mensagem do WhatsApp
+                        </label>
+                        <textarea
+                            {...register('config.message')}
+                            rows={4}
+                            disabled={loading}
+                            placeholder="Olá {patient_name}! Lembrando da sua consulta em {time}."
+                            className="w-full bg-bg-elevated border border-bg-border rounded-sm p-3 text-sm text-text-primary outline-none focus:border-brand-primary transition-colors"
+                        />
+                        <p className="text-[10px] text-text-muted uppercase tracking-wide">
+                            Variáveis disponíveis: {'{patient_name}'} e {'{time}'}.
+                        </p>
+                        {errors.config?.message && (
+                            <p className="text-[10px] text-brand-danger font-bold uppercase">
+                                {typeof errors.config.message === 'string' ? errors.config.message : errors.config.message.message}
+                            </p>
+                        )}
                     </div>
 
                     <div className="space-y-2">
