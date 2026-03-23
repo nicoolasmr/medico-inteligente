@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { getAiInsights, generateGrowthInsights } from './actions'
-import { InsightGrid } from '@/components/insights/InsightGrid'
+import { InsightGrid } from '../../../components/insights/InsightGrid'
 import {
     Sparkles,
     BrainCircuit,
@@ -13,7 +13,7 @@ import {
     RefreshCcw
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { AiInsight } from '@/types'
+import type { AiInsight } from '../../../types'
 
 export default function InsightsPage() {
     const [insights, setInsights] = useState<AiInsight[]>([])

@@ -4,11 +4,11 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { getAutomations, getAutomationLogs } from './actions'
-import { AutomationList } from '@/components/automacoes/AutomationList'
-import { AutomationLogTable } from '@/components/automacoes/AutomationLogTable'
-import { CreateAutomationDialog } from '@/components/automacoes/CreateAutomationDialog'
+import { AutomationList } from '../../../components/automacoes/AutomationList'
+import { AutomationLogTable } from '../../../components/automacoes/AutomationLogTable'
+import { CreateAutomationDialog } from '../../../components/automacoes/CreateAutomationDialog'
 import { Plus, Zap, ShieldCheck, Activity } from 'lucide-react'
-import type { Automation, AutomationLog } from '@/types'
+import type { Automation, AutomationLog } from '../../../types'
 
 export default function AutomacoesPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false)

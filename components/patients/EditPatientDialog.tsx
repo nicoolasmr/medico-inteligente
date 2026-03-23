@@ -10,14 +10,14 @@ import {
     DialogTitle,
     DialogDescription,
     DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { updatePatientSchema, type UpdatePatientInput } from '@/lib/validations/patient'
-import { updatePatient } from '@/app/(dashboard)/patients/actions'
+} from '../ui/dialog'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { updatePatientSchema, type UpdatePatientInput } from '../../lib/validations/patient'
+import { updatePatient } from '../../app/(dashboard)/patients/actions'
 import { toast } from 'sonner'
 import { User, Phone, Mail, FileText } from 'lucide-react'
-import type { Patient } from '@/types'
+import type { Patient } from '../../types'
 
 interface EditPatientDialogProps {
     patient: Patient | null
