@@ -3,13 +3,13 @@ import { readFileSync } from 'node:fs'
 const checks = [
   {
     file: 'lib/supabase/client.ts',
-    pattern: /\blet\s+browserClient\b/g,
+    pattern: /^\s*let\s+browserClient\s*:/gm,
     expected: 1,
     label: 'browserClient declaration',
   },
   {
     file: 'lib/auth.ts',
-    pattern: /\basync\s+function\s+ensureUserProfile\b/g,
+    pattern: /^\s*async\s+function\s+ensureUserProfile\s*\(/gm,
     expected: 1,
     label: 'ensureUserProfile declaration',
   },
