@@ -53,6 +53,9 @@ export default function RegisterPage() {
             router.push(result.redirectTo)
             router.refresh()
         }
+
+        router.push(result.redirectTo)
+        router.refresh()
     }
 
     return (
