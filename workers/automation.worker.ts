@@ -2,6 +2,7 @@ import { Job, Worker } from 'bullmq'
 import { prisma } from '../lib/prisma'
 import { getRedis } from '../lib/redis'
 import { sendWhatsApp } from '../lib/whatsapp'
+import { pathToFileURL } from 'node:url'
 
 type WorkerPayload = {
     automationId: string
@@ -50,7 +51,7 @@ async function persistLog(job: Job<WorkerPayload>, data: { status: 'success' | '
 const worker = new Worker<WorkerPayload>('automations', async job => {
     const { automationId, clinicId, payload, config, actionType } = job.data
 
-    console.log(`[Worker] Executing automation ${automationId} for clinic ${clinicId}`)
+type AutomationLogStatus = 'success' | 'failed' | 'skipped'
 
     try {
         if (actionType === 'whatsapp') {
@@ -99,12 +100,20 @@ const worker = new Worker<WorkerPayload>('automations', async job => {
     }
 }, { connection: getRedis() })
 
-worker.on('completed', job => {
-    console.log(`[Worker] Job ${job.id} completed`)
-})
+            logAutomationEvent('error', 'Job failed event emitted', getLogContext(job), {
+                error: err.message,
+                alertType: 'automation_job_failed_event',
+            })
+        })
 
-worker.on('failed', (job, err) => {
-    console.error(`[Worker] Job ${job?.id} failed:`, err)
-})
+        console.log('--- [Automations Worker] Started and waiting for jobs ---')
+        return automationWorker
+    } catch (error) {
+        if (error instanceof RedisUnavailableError) {
+            console.warn('--- [Automations Worker] Redis unavailable; worker not started ---')
+            return null
+        }
 
-console.log('--- [Automations Worker] Started and waiting for jobs ---')
+        throw error
+    }
+})()

@@ -21,9 +21,16 @@ import { Zap, MessageSquare, Clock } from 'lucide-react'
 interface CreateAutomationDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
+    disabled?: boolean
+    unavailableMessage?: string
 }
 
-export function CreateAutomationDialog({ open, onOpenChange }: CreateAutomationDialogProps) {
+export function CreateAutomationDialog({
+    open,
+    onOpenChange,
+    disabled = false,
+    unavailableMessage,
+}: CreateAutomationDialogProps) {
     const [loading, setLoading] = React.useState(false)
 
     const {
@@ -43,6 +50,11 @@ export function CreateAutomationDialog({ open, onOpenChange }: CreateAutomationD
     })
 
     async function onSubmit(data: CreateAutomationInput) {
+        if (disabled) {
+            toast.error(unavailableMessage ?? 'Automações indisponíveis no momento')
+            return
+        }
+
         setLoading(true)
         try {
             const res = await createAutomation(data)
@@ -73,13 +85,20 @@ export function CreateAutomationDialog({ open, onOpenChange }: CreateAutomationD
                     </DialogDescription>
                 </DialogHeader>
 
+                {disabled ? (
+                    <div className="rounded-sm border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100 flex items-start gap-2">
+                        <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                        <span>{unavailableMessage ?? 'Automações indisponíveis no momento'}</span>
+                    </div>
+                ) : null}
+
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-4 font-sans">
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">Nome do Fluxo</label>
                         <Input
                             {...register('name')}
                             placeholder="Ex: Lembrete de Consulta 24h"
-                            disabled={loading}
+                            disabled={disabled || loading}
                         />
                         {errors.name && <p className="text-[10px] text-brand-danger font-bold uppercase">{errors.name.message}</p>}
                     </div>
@@ -90,7 +109,7 @@ export function CreateAutomationDialog({ open, onOpenChange }: CreateAutomationD
                             <select
                                 {...register('triggerEvent')}
                                 className="w-full bg-bg-elevated border border-bg-border rounded-sm p-2 text-sm text-text-primary outline-none focus:border-brand-primary transition-colors h-10"
-                                disabled={loading}
+                                disabled={disabled || loading}
                             >
                                 <option value="appointment_created">Consulta Criada</option>
                                 <option value="appointment_completed">Consulta Concluída</option>
@@ -139,7 +158,7 @@ export function CreateAutomationDialog({ open, onOpenChange }: CreateAutomationD
                             type="number"
                             {...register('delayMinutes', { valueAsNumber: true })}
                             placeholder="0 = instantâneo"
-                            disabled={loading}
+                            disabled={disabled || loading}
                         />
                     </div>
 
@@ -147,7 +166,7 @@ export function CreateAutomationDialog({ open, onOpenChange }: CreateAutomationD
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
                             Cancelar
                         </Button>
-                        <Button type="submit" disabled={loading}>
+                        <Button type="submit" disabled={disabled || loading}>
                             {loading ? 'Criando...' : 'Ativar Automação'}
                         </Button>
                     </DialogFooter>
