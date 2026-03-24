@@ -10,8 +10,8 @@ import {
     MoreHorizontal,
     GripVertical
 } from 'lucide-react'
-import type { Treatment } from '@/types'
-import { cn, formatCurrency, timeAgo } from '@/lib/utils'
+import type { Treatment } from '../../types'
+import { cn, formatCurrency, timeAgo } from '../../lib/utils'
 
 interface TreatmentCardProps {
     treatment: {

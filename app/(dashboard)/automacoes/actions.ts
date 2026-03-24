@@ -1,18 +1,26 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
-import { getClinicId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
-import { createAutomationSchema, type CreateAutomationInput } from '@/lib/validations/automation'
-import type { Automation, AutomationLog, ActionResult } from '@/types'
-import { Queue } from 'bullmq'
-import { redis } from '@/lib/redis'
+import { getClinicId } from '../../../lib/auth'
+import { prisma } from '../../../lib/prisma'
+import { getAutomationQueue, isAutomationQueueAvailable } from '../../../lib/queue'
+import { createAutomationSchema, type CreateAutomationInput } from '../../../lib/validations/automation'
+import type { ActionResult, Automation, AutomationLog } from '../../../types'
 
-const automationQueue = new Queue('automations', { connection: redis })
+type TriggerPayload = {
+    patient?: {
+        id?: string
+        name?: string
+        phone?: string | null
+    }
+    time?: string
+    [key: string]: unknown
+}
 
-/**
- * Get all automations for the clinic
- */
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback
+}
+
 export async function getAutomations(): Promise<Automation[]> {
     const clinicId = await getClinicId()
     return prisma.automation.findMany({
@@ -21,9 +29,6 @@ export async function getAutomations(): Promise<Automation[]> {
     }) as unknown as Automation[]
 }
 
-/**
- * Create a new automation rule
- */
 export async function createAutomation(data: CreateAutomationInput): Promise<ActionResult<Automation>> {
     try {
         const clinicId = await getClinicId()
@@ -39,14 +44,11 @@ export async function createAutomation(data: CreateAutomationInput): Promise<Act
 
         revalidatePath('/automacoes')
         return { success: true, data: automation as unknown as Automation }
-    } catch (error: any) {
-        return { success: false, error: error.message || 'Erro ao criar automação' }
+    } catch (error: unknown) {
+        return { success: false, error: getErrorMessage(error, 'Erro ao criar automação') }
     }
 }
 
-/**
- * Toggle automation status
- */
 export async function toggleAutomation(id: string, active: boolean): Promise<ActionResult<Automation>> {
     try {
         const clinicId = await getClinicId()
@@ -57,22 +59,35 @@ export async function toggleAutomation(id: string, active: boolean): Promise<Act
 
         revalidatePath('/automacoes')
         return { success: true, data: automation as unknown as Automation }
-    } catch (error: any) {
-        return { success: false, error: error.message || 'Erro ao alterar status' }
+    } catch (error: unknown) {
+        return { success: false, error: getErrorMessage(error, 'Erro ao alterar status') }
     }
 }
 
-/**
- * Trigger an automation manually or via event
- */
-export async function triggerEvent(event: string, payload: any) {
+export async function triggerEvent(event: string, payload: TriggerPayload) {
     const clinicId = await getClinicId()
 
     const rules = await prisma.automation.findMany({
         where: { clinicId, triggerEvent: event, isActive: true }
     })
 
+    if (!isAutomationQueueAvailable()) {
+        console.warn(`[automacoes] Redis não configurado; evento "${event}" ignorado para clinic ${clinicId}.`)
+        return { queued: 0, skipped: rules.length }
+    }
+
+    const automationQueue = getAutomationQueue()
+    let queued = 0
+
     for (const rule of rules) {
+        const jobId = [
+            rule.id,
+            clinicId,
+            event,
+            payload.patient?.id ?? 'no-patient',
+            payload.time ?? 'no-time',
+        ].join(':')
+
         await automationQueue.add(rule.name, {
             automationId: rule.id,
             clinicId,
@@ -80,27 +95,35 @@ export async function triggerEvent(event: string, payload: any) {
             payload,
             config: rule.config,
             actionType: rule.actionType,
+            triggerEvent: rule.triggerEvent,
             delayMinutes: rule.delayMinutes
         }, {
-            delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0
+            jobId,
+            delay: rule.delayMinutes ? Math.max(0, rule.delayMinutes * 60 * 1000) : 0,
+            attempts: 3,
+            removeOnComplete: 100,
+            removeOnFail: 200,
+            backoff: { type: 'exponential', delay: 1000 },
         })
+        queued += 1
     }
+
+    return { queued, skipped: 0 }
 }
 
-/**
- * Get last execution logs
- */
 export async function getAutomationLogs(): Promise<AutomationLog[]> {
     const clinicId = await getClinicId()
     return prisma.automationLog.findMany({
         where: { clinicId },
+        include: {
+            automation: { select: { name: true } },
+            patient: { select: { name: true } },
+        },
         orderBy: { createdAt: 'desc' },
         take: 50
     }) as unknown as AutomationLog[]
 }
-/**
- * Delete an automation rule
- */
+
 export async function deleteAutomation(id: string): Promise<ActionResult<void>> {
     try {
         const clinicId = await getClinicId()
@@ -110,7 +133,7 @@ export async function deleteAutomation(id: string): Promise<ActionResult<void>> 
 
         revalidatePath('/automacoes')
         return { success: true, data: undefined }
-    } catch (error: any) {
-        return { success: false, error: error.message || 'Erro ao excluir automação' }
+    } catch (error: unknown) {
+        return { success: false, error: getErrorMessage(error, 'Erro ao excluir automação') }
     }
 }

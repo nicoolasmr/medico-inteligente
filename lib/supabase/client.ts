@@ -2,14 +2,45 @@
 
 import { createBrowserClient } from '@supabase/ssr'
 
-export function createClient() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+let browserClient: ReturnType<typeof createBrowserClient> | null = null
 
-    // Build-time guard for static pre-rendering passes
+function readPublicSupabaseEnv() {
+    return {
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(),
+        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim(),
+    }
+}
+
+function createMissingEnvProxy(message: string) {
+    return new Proxy(
+        {},
+        {
+            get() {
+                throw new Error(message)
+            },
+        }
+    ) as ReturnType<typeof createBrowserClient>
+}
+
+export function createClient() {
+    if (browserClient) return browserClient
+
+    // In client bundles, Next.js only exposes NEXT_PUBLIC_* env vars when they
+    // are accessed statically. Dynamic lookups like process.env[name] can end
+    // up undefined in the browser even when the variables exist in Vercel.
+    const { url, key } = readPublicSupabaseEnv()
+
     if (!url || !key) {
-        return {} as any
+        const missing = [
+            !url ? 'NEXT_PUBLIC_SUPABASE_URL' : null,
+            !key ? 'NEXT_PUBLIC_SUPABASE_ANON_KEY' : null,
+        ].filter(Boolean).join(', ')
+
+        return createMissingEnvProxy(
+            `Missing required environment variables: ${missing} (browser Supabase client)`
+        )
     }
 
-    return createBrowserClient(url, key)
+    browserClient = createBrowserClient(url, key)
+    return browserClient
 }
