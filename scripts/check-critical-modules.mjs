@@ -1,15 +1,45 @@
 import { readFileSync } from 'node:fs'
+import ts from 'typescript'
+
+function parseFile(file) {
+  return ts.createSourceFile(
+    file,
+    readFileSync(file, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  )
+}
+
+function countDeclarations(sourceFile, targetName) {
+  let count = 0
+
+  function visit(node) {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === targetName) {
+      count += 1
+    }
+
+    if (ts.isFunctionDeclaration(node) && node.name?.text === targetName) {
+      count += 1
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return count
+}
 
 const checks = [
   {
     file: 'lib/supabase/client.ts',
-    pattern: /^\s*let\s+browserClient\s*:/gm,
+    declaration: 'browserClient',
     expected: 1,
     label: 'browserClient declaration',
   },
   {
     file: 'lib/auth.ts',
-    pattern: /^\s*async\s+function\s+ensureUserProfile\s*\(/gm,
+    declaration: 'ensureUserProfile',
     expected: 1,
     label: 'ensureUserProfile declaration',
   },
@@ -18,14 +48,11 @@ const checks = [
 const errors = []
 
 for (const check of checks) {
-  const content = readFileSync(check.file, 'utf8')
-  const matches = content.match(check.pattern)
-  const count = matches ? matches.length : 0
+  const sourceFile = parseFile(check.file)
+  const count = countDeclarations(sourceFile, check.declaration)
 
   if (count !== check.expected) {
-    errors.push(
-      `${check.file}: expected ${check.expected} ${check.label}, found ${count}`
-    )
+    errors.push(`${check.file}: expected ${check.expected} ${check.label}, found ${count}`)
   }
 }
 
