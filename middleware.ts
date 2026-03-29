@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { apiRatelimit } from './lib/ratelimit'
 
 const PROTECTED_PREFIXES = [
+    '/portal',
     '/dashboard',
     '/patients',
     '/agenda',
@@ -11,9 +12,60 @@ const PROTECTED_PREFIXES = [
     '/automacoes',
     '/insights',
     '/configuracoes',
-]
+] as const
 
-const AUTH_PREFIXES = ['/login', '/register', '/forgot-password']
+const AUTH_PREFIXES = ['/login', '/register', '/forgot-password'] as const
+const RATE_LIMITED_PREFIXES = ['/api', ...PROTECTED_PREFIXES] as const
+
+function getRequestIdentifier(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (!forwardedFor) return '127.0.0.1'
+
+    return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
+}
+
+function matchesPrefix(pathname: string, prefixes: readonly string[]) {
+    return prefixes.some(prefix => pathname.startsWith(prefix))
+}
+
+function isRateLimitedPath(pathname: string) {
+    return matchesPrefix(pathname, RATE_LIMITED_PREFIXES)
+}
+
+function getRequestIdentifier(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (!forwardedFor) return '127.0.0.1'
+
+    return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
+}
+
+function getRequestIdentifier(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (!forwardedFor) return '127.0.0.1'
+
+    return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
+}
+
+function getRequestIdentifier(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (!forwardedFor) return '127.0.0.1'
+
+    return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
+}
+
+function getRequestIdentifier(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (!forwardedFor) return '127.0.0.1'
+
+    return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
+}
+
+function getRequestIdentifier(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    if (!forwardedFor) return '127.0.0.1'
+
+    return forwardedFor.split(',')[0]?.trim() || '127.0.0.1'
+}
 
 function getRequestIdentifier(request: NextRequest) {
     const forwardedFor = request.headers.get('x-forwarded-for')
@@ -52,16 +104,16 @@ export async function middleware(request: NextRequest) {
                 getAll: () => request.cookies.getAll(),
                 setAll: (pairs: { name: string; value: string; options: any }[]) =>
                     pairs.forEach(({ name, value, options }) =>
-                        response.cookies.set(name, value, options)
+                        response.cookies.set(name, value, options),
                     ),
             },
-        }
+        },
     )
 
     const { data: { session } } = await supabase.auth.getSession()
 
-    const isProtected = PROTECTED_PREFIXES.some(p => pathname.startsWith(p))
-    const isAuthRoute = AUTH_PREFIXES.some(p => pathname.startsWith(p))
+    const isProtected = matchesPrefix(pathname, PROTECTED_PREFIXES)
+    const isAuthRoute = matchesPrefix(pathname, AUTH_PREFIXES)
 
     if (isProtected && !session) {
         const url = new URL('/login', request.url)

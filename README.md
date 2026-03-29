@@ -69,7 +69,8 @@ Para detalhes profundos, explore nossa pasta `/DOCS`:
    npx prisma db push
    npx tsx prisma/seed.ts # Popula com dados demo
    ```
-4. **Rodar:** `npm run dev`
+4. **Rodar app:** `npm run dev`
+5. **Worker de automações:** em outro terminal, rode `npm run worker` para subir o único worker operacional do projeto (`workers/automation.worker.ts`). O alias `npm run worker:automation` foi mantido apenas para compatibilidade com ambientes legados.
 
 ---
 
