@@ -13,18 +13,18 @@ import {
     CircleDollarSign,
     Target
 } from 'lucide-react'
-import { getPatient, deletePatient } from '../actions'
-import { PatientProfile } from '@/components/patients/PatientProfile'
-import { PatientHistory } from '@/components/patients/PatientHistory'
-import { EditPatientDialog } from '@/components/patients/EditPatientDialog'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { getPatient, deletePatient, generatePatientPortalLink, recordPatientPortalCopy, sendPatientPortalLink } from '../actions'
+import { PatientProfile } from '../../../../components/patients/PatientProfile'
+import { PatientHistory } from '../../../../components/patients/PatientHistory'
+import { EditPatientDialog } from '../../../../components/patients/EditPatientDialog'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../components/ui/tabs'
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import type { Patient } from '@/types'
+} from '../../../../components/ui/dropdown-menu'
+import type { Patient } from '../../../../types'
 import { toast } from 'sonner'
 
 export default function PatientDetailsPage() {
@@ -32,6 +32,8 @@ export default function PatientDetailsPage() {
     const [patient, setPatient] = useState<Patient | null>(null)
     const [loading, setLoading] = useState(true)
     const [isEditOpen, setIsEditOpen] = useState(false)
+    const [portalLinkLoading, setPortalLinkLoading] = useState(false)
+    const [portalWhatsAppLoading, setPortalWhatsAppLoading] = useState(false)
     const router = useRouter()
 
     const loadPatient = useCallback(async () => {
@@ -69,6 +71,52 @@ export default function PatientDetailsPage() {
             }
         } catch (err) {
             toast.error('Erro ao excluir paciente')
+        }
+    }
+
+    async function handleGeneratePortalLink() {
+        if (!patient) return
+
+        try {
+            setPortalLinkLoading(true)
+            const result = await generatePatientPortalLink(patient.id)
+
+            if (!result.success) {
+                toast.error(result.error)
+                return
+            }
+
+            const absoluteUrl = typeof window !== 'undefined'
+                ? new URL(result.data, window.location.origin).toString()
+                : result.data
+
+            await navigator.clipboard.writeText(absoluteUrl)
+            await recordPatientPortalCopy(patient.id)
+            toast.success('Link seguro do portal copiado para a área de transferência.')
+        } catch (err) {
+            toast.error('Não foi possível gerar o link do portal agora.')
+        } finally {
+            setPortalLinkLoading(false)
+        }
+    }
+
+    async function handleSendPortalLink() {
+        if (!patient) return
+
+        try {
+            setPortalWhatsAppLoading(true)
+            const result = await sendPatientPortalLink(patient.id)
+
+            if (!result.success) {
+                toast.error(result.error)
+                return
+            }
+
+            toast.success('Link do portal enviado para o WhatsApp do paciente.')
+        } catch (err) {
+            toast.error('Não foi possível enviar o link do portal agora.')
+        } finally {
+            setPortalWhatsAppLoading(false)
         }
     }
 
@@ -118,7 +166,13 @@ export default function PatientDetailsPage() {
             </div>
 
             {/* Profile Header */}
-            <PatientProfile patient={patient} />
+            <PatientProfile
+                patient={patient}
+                onGeneratePortalLink={handleGeneratePortalLink}
+                onSendPortalLink={handleSendPortalLink}
+                portalLinkLoading={portalLinkLoading}
+                portalWhatsAppLoading={portalWhatsAppLoading}
+            />
 
             {/* Tabs Section */}
             <Tabs defaultValue="history" className="w-full">

@@ -7,7 +7,7 @@ export type TreatmentStage = 'lead' | 'consulta_realizada' | 'tratamento_indicad
 export type PaymentStatus = 'pending' | 'paid' | 'overdue' | 'refunded' | 'cancelled'
 export type PaymentMethod = 'cash' | 'pix' | 'credit' | 'debit' | 'transfer' | 'insurance'
 export type AutomationTrigger = 'appointment_created' | 'appointment_completed' | 'appointment_cancelled' | 'treatment_indicated' | 'treatment_approved' | 'payment_received' | 'patient_no_return_30' | 'patient_no_return_60' | 'patient_no_return_90'
-export type ActionType = 'whatsapp' | 'sms' | 'email' | 'task' | 'internal_notification'
+export type ActionType = 'whatsapp'
 export type InteractionType = 'note' | 'whatsapp' | 'sms' | 'email' | 'call'
 export type InsightImpact = 'high' | 'medium' | 'low'
 export type Gender = 'M' | 'F' | 'other'
@@ -133,9 +133,10 @@ export type AutomationLog = {
     triggerEvent: string
     actionType: string
     status: AutomationLogStatus
-    response: any
+    response: Record<string, unknown> | null
     createdAt: string
-    patient?: { name: string }
+    patient?: { name: string } | null
+    automation?: { name: string } | null
 }
 
 export type AiInsight = {
@@ -183,6 +184,8 @@ export type SmartAlert = {
     message: string
     count: number
     action: string
+    href: string
+    description?: string
 }
 
 export type TreatmentsByStage = Record<TreatmentStage, {
