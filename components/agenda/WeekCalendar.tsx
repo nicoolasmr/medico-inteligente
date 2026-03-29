@@ -14,10 +14,10 @@ import { format, startOfWeek, addDays, subDays, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { DayColumn } from './DayColumn'
 import { CreateAppointmentSheet } from './CreateAppointmentSheet'
-import { getAppointments, updateAppointmentStatus, deleteAppointment } from '@/app/(dashboard)/agenda/actions'
-import type { Appointment } from '@/types'
+import { getAppointments, updateAppointmentStatus, deleteAppointment } from '../../app/(dashboard)/agenda/actions'
+import type { Appointment } from '../../types'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn } from '../../lib/utils'
 
 export function WeekCalendar() {
     const [currentDate, setCurrentDate] = useState<Date | null>(null)

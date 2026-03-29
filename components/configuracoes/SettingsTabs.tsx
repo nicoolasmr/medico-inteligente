@@ -1,8 +1,8 @@
 'use client'
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
 import {
     Building2,
     Users,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatCurrency, cn } from '@/lib/utils'
+import { formatCurrency, cn } from '../lib/utils'
 
 describe('Utility Functions', () => {
     describe('formatCurrency', () => {
